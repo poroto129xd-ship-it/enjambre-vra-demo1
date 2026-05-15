@@ -52,7 +52,7 @@ def calcular_ruta_patron(coords_poligono, patron, lat_centro, lon_centro):
     if not coords_poligono:
         return []
     
-    ruta = [[lat_centro, lon_centro]] # Despegue
+    ruta = [[lat_centro, lon_centro]] 
     coords_formateadas = [[p[1], p[0]] for p in coords_poligono]
     
     if patron == "Perimetral (Bordes)":
@@ -122,7 +122,7 @@ elif st.session_state.paso == 'onboarding_mapa':
     draw.add_to(mapa_dibujo)
     mapa_data = st_folium(mapa_dibujo, width=1000, height=400, key="dibujo_inicial")
     
-    st.write("📍 **Paso 2:** Ingrese el área total de la zona (Límite máximo).")
+    st.write("📍 **Paso 2:** Ingrese el área total de la zona.")
     area_ingresada = st.number_input("Área total del predio (m²):", min_value=100, max_value=1000000, value=5000, step=100)
     
     if st.button("Confirmar Terreno y Continuar ➡️", type="primary"):
@@ -208,7 +208,7 @@ elif st.session_state.paso == 'dashboard':
         with zonas[2]:
             st.markdown(f'<div class="sensor-rojo"><b>🚨 Zona de Riesgo</b><br>Humedad Suelo: {"22%" if hum_real > 40 else "15% (CRÍTICO)"}<br>Alerta hídrica<br>Requiere Atención</div>', unsafe_allow_html=True)
 
-    # ---------------- PESTAÑA 2: DRON FIJADO COMO MONITOR DE SEGURIDAD ----------------
+    # ---------------- PESTAÑA 2: DRON FIJO + MICRO CLIMA ----------------
     with tab2:
         st.header("Centro de Mando Logístico VRA")
         col_ctrl, col_map = st.columns([1, 2])
@@ -232,7 +232,6 @@ elif st.session_state.paso == 'dashboard':
             if st.button("🚀 Forzar Despliegue", type="primary", disabled=boton_deshabilitado, use_container_width=True):
                 litros_usados = st.session_state.parcela_area * 0.5 if tipo_mision == "Riego de Emergencia" else 0
                 st.session_state.total_litros_hoy += litros_usados
-                
                 color_ruta = "cyan" if tipo_mision == "Riego de Emergencia" else ("orange" if tipo_mision == "Nutrición (Proteínas)" else "red")
                 ruta_calculada = calcular_ruta_patron(st.session_state.poligono_coords, patron_vuelo, st.session_state.centro_mapa[0], st.session_state.centro_mapa[1])
                 
@@ -244,27 +243,56 @@ elif st.session_state.paso == 'dashboard':
                     
                     st.session_state.registro_diario.append({
                         "Hora": f"{hora_actual}:00", "Misión": tipo_mision, "Patrón": patron_vuelo,
-                        "Agua Usada": f"{litros_usados} L", "Estado": "Completado Manual"
+                        "Agua Usada": f"{litros_usados} L", "Estado": "Completado"
                     })
         
         with col_map:
-            # MAGIA DEL BLOQUEO: Desactivamos zoom_control, scrollWheelZoom y dragging.
-            # Esto fija la cámara permanentemente, como el monitor de una Torre de Control.
+            st.markdown("**Monitor de Vuelo: Estrés Hídrico Intra-Parcela**")
+            
+            # EL BLOQUEO ABSOLUTO DEL MAPA
             mapa_dron = folium.Map(
                 location=st.session_state.centro_mapa, 
-                zoom_start=18, 
                 tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", 
                 attr="Esri",
                 zoom_control=False,
                 scrollWheelZoom=False,
-                dragging=False
+                dragging=False,
+                touchZoom=False,
+                doubleClickZoom=False,
+                keyboard=False
             )
             
             if st.session_state.poligono_coords:
                 coords_formateadas = [[p[1], p[0]] for p in st.session_state.poligono_coords]
-                folium.Polygon(locations=coords_formateadas, color="gray", fill=True, fill_color="gray", fill_opacity=0.2).add_to(mapa_dron)
+                
+                # 1. Dibujar el polígono principal
+                folium.Polygon(locations=coords_formateadas, color="white", weight=2, fill=True, fill_color="gray", fill_opacity=0.1).add_to(mapa_dron)
+                
+                # 2. INTELIGENCIA ESPACIAL: Simulación de Humedad Intra-Parcela
+                lats = [p[0] for p in coords_formateadas]
+                lons = [p[1] for p in coords_formateadas]
+                lat_max, lat_min = max(lats), min(lats)
+                lon_max, lon_min = max(lons), min(lons)
+                hum_base = st.session_state.clima_real["hum"]
+                
+                # Punto de Estrés (Seco)
+                folium.CircleMarker(
+                    location=[lat_max - (lat_max-lat_min)*0.2, lon_max - (lon_max-lon_min)*0.2],
+                    radius=20, color="red", fill=True, fill_color="red", fill_opacity=0.6,
+                    tooltip=f"Foco de Estrés: {max(5, hum_base - 25)}% Humedad"
+                ).add_to(mapa_dron)
+                
+                # Punto Óptimo (Húmedo)
+                folium.CircleMarker(
+                    location=[lat_min + (lat_max-lat_min)*0.3, lon_min + (lon_max-lon_min)*0.3],
+                    radius=20, color="green", fill=True, fill_color="green", fill_opacity=0.6,
+                    tooltip=f"Zona Óptima: {min(100, hum_base + 10)}% Humedad"
+                ).add_to(mapa_dron)
+                
+                # Bloqueo de cámara sobre el polígono
                 mapa_dron.fit_bounds(coords_formateadas)
             
+            # Dibujar ruta
             if ruta_calculada:
                 plugins.AntPath(locations=ruta_calculada, dash_array=[10, 20], delay=800, color=color_ruta, weight=5, pulse_color='white').add_to(mapa_dron)
                 
