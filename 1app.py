@@ -67,7 +67,7 @@ st.markdown("""
     .ai-card { background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(34, 197, 94, 0.3); backdrop-filter: blur(10px); margin-bottom: 15px;}
     [data-testid="stChatMessage"] { background: rgba(0, 20, 10, 0.85); border-radius: 10px; border: 1px solid rgba(34, 197, 94, 0.4); padding: 15px; margin-bottom: 10px; }
 
-    /* RECUADROS DE HERRAMIENTAS (NUEVO) */
+    /* RECUADROS DE HERRAMIENTAS */
     .tool-box {
         background: rgba(255, 255, 255, 0.07);
         border: 1px solid rgba(187, 247, 208, 0.25);
@@ -88,6 +88,42 @@ st.markdown("""
         transform: translateY(-5px);
         background: rgba(255, 255, 255, 0.12);
         border: 1px solid rgba(34, 197, 94, 0.5);
+    }
+
+    /* 🚀 SOLUCIÓN: TABLAS DE CRISTAL (GLASSMORPHISM) SUTILES Y ELEGANTES */
+    .glass-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(12px);
+        border-radius: 12px;
+        overflow: hidden;
+        color: #f0fdf4;
+        font-size: 15px;
+        margin-top: 15px;
+        border: 1px solid rgba(187, 247, 208, 0.15);
+    }
+    .glass-table th {
+        background: rgba(34, 197, 94, 0.15);
+        padding: 14px 18px;
+        text-align: left;
+        font-weight: 500;
+        border-bottom: 1px solid rgba(187, 247, 208, 0.2);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 13px;
+    }
+    .glass-table td {
+        padding: 12px 18px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        font-weight: 300; /* Texto más fino y sutil */
+    }
+    .glass-table tr:hover td {
+        background: rgba(255, 255, 255, 0.08); /* Efecto hover */
+        transition: background 0.2s ease;
+    }
+    .glass-table tr:last-child td {
+        border-bottom: none;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -118,7 +154,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 4. BASE DE DATOS AGRONÓMICA
+# 4. BASE DE DATOS AGRONÓMICA EXPANDIDA
 # ==========================================
 DB_CULTIVOS_PLAS = {
     "Cerezas": {
@@ -199,29 +235,6 @@ if 'chat_history' not in st.session_state:
 # ==========================================
 # 5. FUNCIONES CORE
 # ==========================================
-class MoveDrone(MacroElement):
-    def __init__(self, coords):
-        super().__init__()
-        self.coords = coords
-        self._template = Template(u"""
-        {% macro script(this, kwargs) %}
-        var coords = {{ this.coords }};
-        if(coords.length > 0){
-            var droneIcon = L.divIcon({html: '<div style="font-size:35px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin-top:-20px; margin-left:-20px;">🚁</div>', className: 'empty'});
-            var droneMarker = L.marker(coords[0], {icon: droneIcon}).addTo({{this._parent.get_name()}});
-            var i = 0;
-            function animateDrone() {
-                if (i < coords.length) {
-                    droneMarker.setLatLng(coords[i]); 
-                    i++;
-                    setTimeout(animateDrone, 350);
-                }
-            }
-            setTimeout(animateDrone, 500);
-        }
-        {% endmacro %}
-        """)
-
 def punto_en_poligono(x, y, poligono):
     n = len(poligono)
     inside = False
@@ -368,13 +381,13 @@ def calcular_ruta_patron(coords_zona, patron, lat_base, lon_base):
 # ==========================================
 
 # ------------------------------------------
-# FASE 1: LOGIN / REGISTRO + HERRAMIENTAS
+# FASE 1: LOGIN / REGISTRO
 # ------------------------------------------
 if st.session_state.paso == 'login':
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.title("🌱 Enjambre VRA")
-        st.subheader("Acceso Administrativo Real-Time")
+        st.subheader("Portal de Acceso Tecnológico")
         
         tab_login, tab_registro = st.tabs(["🔑 Iniciar Sesión", "📝 Crear Cuenta Local"])
         
@@ -401,7 +414,7 @@ if st.session_state.paso == 'login':
         with tab_registro:
             with st.form("registro_form"):
                 nombre_reg = st.text_input("Nombre Completo")
-                tel_reg = st.text_input("WhatsApp")
+                tel_reg = st.text_input("WhatsApp (Ej: 56912345678)")
                 pass_reg = st.text_input("Crear Contraseña", type="password")
                 submit_reg = st.form_submit_button("Registrarse", type="primary", use_container_width=True)
 
@@ -417,7 +430,7 @@ if st.session_state.paso == 'login':
                         st.error("❌ Este número de WhatsApp ya está registrado.")
                     conn.close()
 
-    # 🚀 SECCIÓN: HERRAMIENTAS INCLUIDAS (EN RECUADROS)
+    # SECCIÓN: HERRAMIENTAS INCLUIDAS (EN RECUADROS)
     st.markdown("--- ")
     st.markdown("<h3 style='text-align: center; margin-bottom: 30px;'>Herramientas Incluidas</h3>", unsafe_allow_html=True)
     
@@ -427,14 +440,13 @@ if st.session_state.paso == 'login':
         "Streamlit", "Pandas", "Python"
     ]
     
-    # Grid de 3x3 para los recuadros de herramientas
     for i in range(0, len(herramientas), 3):
         row_tools = herramientas[i:i+3]
         cols = st.columns(3)
         for j, tool in enumerate(row_tools):
             with cols[j]:
                 st.markdown(f'<div class="tool-box">{tool}</div>', unsafe_allow_html=True)
-    st.write("")
+    st.write("") 
 
 # ------------------------------------------
 # FASE 2: DELIMITACIÓN TOTAL
@@ -566,7 +578,6 @@ elif st.session_state.paso == 'onboarding_cultivos':
         
         m_res = st_folium(m_plas, height=550, use_container_width=True, key="mapeador_plas")
         
-        # Guardar coordenadas temporales al dibujar
         if m_res and m_res.get("all_drawings"):
             st.session_state.temp_coords = m_res["all_drawings"][-1]["geometry"]["coordinates"][0]
 
@@ -575,7 +586,6 @@ elif st.session_state.paso == 'onboarding_cultivos':
 # ------------------------------------------
 elif st.session_state.paso == 'dashboard':
     
-    # Declaración de variables globales ordenadas para todo el Dashboard
     area_t = st.session_state.parcela_area
     area_u = sum(v['area'] for v in st.session_state.cultivos_mapeados.values())
     area_l = max(0, area_t - area_u)
@@ -587,7 +597,6 @@ elif st.session_state.paso == 'dashboard':
     
     st.title(f"📊 Dashboard Enjambre VRA | Admin: {st.session_state.usuario.get('nombre', '')}")
     
-    # Cálculo geométrico de Zonas de Riesgo Matemáticas (Tercio superior, medio, inferior)
     pts_t = [[p[1], p[0]] for p in st.session_state.poligono_coords[:-1]]
     n_pts = len(pts_t)
     c = st.session_state.centro_mapa
@@ -601,7 +610,6 @@ elif st.session_state.paso == 'dashboard':
         "Zona Crítica": [c] + pts_t[t2:] + [pts_t[0], c]
     }
 
-    # Barra lateral
     with st.sidebar:
         st.header("🕒 Cronograma Operativo")
         st.markdown('<div class="horario-auto">💧 <b>05:30 AM</b> - Riego General</div>', unsafe_allow_html=True)
@@ -621,7 +629,6 @@ elif st.session_state.paso == 'dashboard':
         progreso = min(area_u / area_t, 1.0) if area_t > 0 else 0.0
         st.progress(progreso)
 
-    # Pestañas Principales
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["🌱 Sensores", "🚁 Logística Dron", "📈 Reporte Maestro", "📉 Gemelo Digital (IA)", "🤖 Consultor IA"])
     
     # ------------------------------------------
@@ -639,7 +646,6 @@ elif st.session_state.paso == 'dashboard':
         if len(list_m) > 0:
             cols_s = st.columns(len(list_m))
             for i, sector in enumerate(list_m):
-                # Intercalar estilos CSS para diferenciar visualmente los sensores
                 clase_css = "sensor-verde" if i % 2 == 0 else "sensor-amarillo"
                 humedad_sim = "68%" if i % 2 == 0 else "45%"
                 with cols_s[i]: 
@@ -667,7 +673,6 @@ elif st.session_state.paso == 'dashboard':
                 agua_base = sum(v['agua'] for v in st.session_state.cultivos_mapeados.values()) if st.session_state.cultivos_mapeados else 0
                 factor_zona = 1.0 if zona_o == "Toda la Parcela" else 0.333
                 
-                # Lógica de física de fluidos y ahorro
                 if tipo_m == "Riego de Emergencia":
                     litros_trad = agua_base * 1.15 * factor_zona 
                     litros_vr = agua_base * 0.12 * factor_zona   
@@ -685,35 +690,27 @@ elif st.session_state.paso == 'dashboard':
                 st.session_state.ruta_dron_actual = calcular_ruta_patron(zonas_v[zona_o], patron_vuelo, c[0], c[1])
                 
                 st.session_state.mostrar_animacion_dron = True
-                st.session_state.patron_animacion = patron_vuelo
                 
-                with st.spinner(f"🛰️ Conectando telemetría VRA. Trazando ruta hacia {zona_o}..."):
+                with st.spinner(f"🛰️ Calculando telemetría VRA. Trazando ruta hacia {zona_o}..."):
                     time.sleep(1.5)
                 
+                st.success("✅ Misión VRA procesada. Ruta de telemetría proyectada en el mapa.")
                 st.session_state.registro_diario.append({"Hora": f"{hora_actual}:00", "Misión": tipo_m, "Zona": zona_o, "Agua": f"{round(litros_vr, 1)} L"})
-                st.rerun() 
                 
         with col_m:
             map_d = folium.Map(location=c, zoom_start=16, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri")
             
-            # Capa 1: Cultivos mapeados (Fondo)
             for s in st.session_state.cultivos_mapeados.values():
                 folium.Polygon(locations=s['coords'], color=s['color'], weight=1, fill=True, fill_opacity=0.2, tooltip=f"Cultivo: {s['nombre']}").add_to(map_d)
             
-            # Capa 2: Triángulos de Riesgo (Superficie)
             if "Zona Óptima" in zonas_v and len(zonas_v["Zona Óptima"]) > 2:
                 folium.Polygon(locations=zonas_v["Zona Óptima"], color="#28a745", weight=2, fill=True, fill_color="#28a745", fill_opacity=0.45, tooltip="Zona Óptima (>60% Humedad)").add_to(map_d)
                 folium.Polygon(locations=zonas_v["Zona Media"], color="#ffc107", weight=2, fill=True, fill_color="#ffc107", fill_opacity=0.45, tooltip="Zona Media (40-60% Humedad)").add_to(map_d)
                 folium.Polygon(locations=zonas_v["Zona Crítica"], color="#dc3545", weight=2, fill=True, fill_color="#dc3545", fill_opacity=0.55, tooltip="Zona Crítica (<30% Humedad)").add_to(map_d)
 
-            # Capa 3: Ruta del Dron y Animación
+            # Capa 3: Ruta del Dron Táctica
             if st.session_state.ruta_dron_actual: 
                 plugins.AntPath(locations=st.session_state.ruta_dron_actual, color=st.session_state.color_dron_actual, weight=5, dash_array=[10, 20], delay=800, pulse_color='white').add_to(map_d)
-                
-                if st.session_state.get('mostrar_animacion_dron', False):
-                    # Desplegamos el dron animado si se acaba de enviar la orden
-                    map_d.get_root().add_child(MoveDrone(st.session_state.ruta_dron_actual))
-                    st.session_state.mostrar_animacion_dron = False
             
             st_folium(map_d, height=450, use_container_width=True)
 
@@ -722,7 +719,15 @@ elif st.session_state.paso == 'dashboard':
     # ------------------------------------------
     with tab3:
         st.header("Reporte Ejecutivo Operacional")
-        st.dataframe(pd.DataFrame(st.session_state.registro_diario), use_container_width=True)
+        
+        # 🚀 SOLUCIÓN: TABLA DE CRISTAL PARA EL REPORTE
+        df_registro = pd.DataFrame(st.session_state.registro_diario)
+        if not df_registro.empty:
+            st.markdown(df_registro.to_html(index=False, classes="glass-table", border=0), unsafe_allow_html=True)
+        else:
+            st.info("Aún no hay misiones registradas hoy.")
+        
+        st.write("")
         
         v_r = sum(1 for r in st.session_state.registro_diario if r["Misión"] == "Riego de Emergencia")
         v_n = sum(1 for r in st.session_state.registro_diario if r["Misión"] == "Nutrición (Proteínas)")
@@ -802,7 +807,6 @@ _Generado automáticamente por Inteligencia Geoespacial PLAS._"""
             })
             
         if datos_sim:
-            # Recrear un dataframe limpio para el gráfico de barras sin strings formateados
             df_crudo = pd.DataFrame([{ "Cultivo": d["Cultivo"], "Cosecha (Ton)": float(d["Cosecha (Ton)"].replace(',', '')) } for d in datos_sim])
             
             c1, c2 = st.columns(2)
@@ -811,14 +815,16 @@ _Generado automáticamente por Inteligencia Geoespacial PLAS._"""
                 st.bar_chart(df_crudo.set_index("Cultivo")["Cosecha (Ton)"])
             with c2: 
                 st.subheader("Proyección Económica (ROI)")
-                st.dataframe(pd.DataFrame(datos_sim), use_container_width=True, hide_index=True)
+                # 🚀 SOLUCIÓN: TABLA DE CRISTAL PARA EL GEMELO DIGITAL
+                df_html = pd.DataFrame(datos_sim).to_html(index=False, classes="glass-table", border=0)
+                st.markdown(df_html, unsafe_allow_html=True)
                 
             st.success(f"💡 Sugerencia IA: Mantener el escenario '{inversion}' para maximizar el ROI foliar sin causar estrés hídrico en las plantas.")
         else: 
             st.warning("Debe mapear sectores productivos en la Fase 3 para poder generar el Gemelo Digital.")
 
     # ------------------------------------------
-    # PESTAÑA 5: CONSULTOR IA (MOTOR NLP AVANZADO Y FITOSANITARIO)
+    # PESTAÑA 5: CONSULTOR IA
     # ------------------------------------------
     with tab5:
         st.header("🤖 Consultor Agrotecnológico (IA)")
@@ -834,7 +840,6 @@ _Generado automáticamente por Inteligencia Geoespacial PLAS._"""
         prompt = st.chat_input("Consulta a la IA (ej: 'qué pasa si falta agua', 'qué plagas tengo', 'cuánto ahorré')...")
         
         if prompt:
-            # 1. Registrar mensaje del usuario
             st.session_state.chat_history.append({"role": "user", "content": prompt})
             prompt_lower = prompt.lower()
             respuesta_ia = ""
@@ -919,6 +924,5 @@ _Generado automáticamente por Inteligencia Geoespacial PLAS._"""
             else:
                 respuesta_ia = "🤖 **Agri-Brain:** No detecté tu intención. Como tu IA especializada, puedo procesar tu telemetría si me preguntas sobre:\n\n- 🐛 **Riesgos y Plagas** *(Ej: ¿Qué plagas atacan mi cultivo? o ¿Qué pasa si falta agua?)*\n- 🎯 **Optimización** *(Ej: ¿Cómo optimizo recursos?)*\n- 🗺️ **Superficie** *(Ej: ¿Cuánto espacio libre me queda?)*\n- 💧 **Riego** *(Ej: ¿Cuánto ahorré hoy?)*\n- 📈 **Finanzas** *(Ej: ¿Cuál es mi proyección?)*"
             
-            # 3. Guardar y refrescar interfaz
             st.session_state.chat_history.append({"role": "assistant", "content": respuesta_ia})
             st.rerun()
