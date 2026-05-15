@@ -7,10 +7,19 @@ import pandas as pd
 from datetime import date
 import urllib.parse
 import requests
+import base64
 from twilio.rest import Client
 
 # --- 1. CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Enjambre VRA | Plataforma Integral", page_icon="🚁", layout="wide")
+
+# --- FUNCIÓN PARA CARGAR IMAGEN DE FONDO ---
+def cargar_imagen_base64(ruta_imagen):
+    try:
+        with open(ruta_imagen, "rb") as archivo:
+            return base64.b64encode(archivo.read()).decode()
+    except FileNotFoundError:
+        return None
 
 st.markdown("""
     <style>
@@ -19,6 +28,232 @@ st.markdown("""
     .sensor-rojo { background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border-left: 5px solid #dc3545; text-align: center; font-weight: bold; margin-bottom: 10px;}
     .horario-auto { background-color: #e2e3e5; color: #383d41; padding: 10px; border-radius: 5px; border-left: 5px solid #6c757d; margin-bottom: 5px;}
     </style>
+""", unsafe_allow_html=True)
+
+# --- DISEÑO VISUAL: FONDO AGRÍCOLA ANIMADO ---
+fondo_base64 = cargar_imagen_base64("assets/fondo_campo.jpg")
+
+if fondo_base64:
+    fondo_css = f"""
+    background-image:
+        linear-gradient(
+            rgba(0, 25, 10, 0.72),
+            rgba(0, 40, 18, 0.84)
+        ),
+        url("data:image/jpg;base64,{fondo_base64}");
+    background-size: 115%;
+    background-position: center;
+    background-attachment: fixed;
+    animation: moverFondoCampo 28s ease-in-out infinite alternate;
+    """
+else:
+    fondo_css = """
+    background:
+        radial-gradient(circle at top left, rgba(34,197,94,0.35), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(132,204,22,0.25), transparent 35%),
+        linear-gradient(135deg, #052e16 0%, #064e3b 45%, #022c22 100%);
+    """
+
+st.markdown(f"""
+<style>
+
+/* Ocultar elementos visuales de Streamlit */
+#MainMenu {{
+    visibility: hidden;
+}}
+
+footer {{
+    visibility: hidden;
+}}
+
+header {{
+    visibility: hidden;
+}}
+
+/* Fondo principal agrícola con movimiento */
+.stApp {{
+    {fondo_css}
+    color: white;
+}}
+
+/* Animación suave del fondo */
+@keyframes moverFondoCampo {{
+    0% {{
+        background-position: center center;
+        background-size: 115%;
+    }}
+    50% {{
+        background-position: center top;
+        background-size: 122%;
+    }}
+    100% {{
+        background-position: center bottom;
+        background-size: 118%;
+    }}
+}}
+
+/* Partículas verdes suaves */
+.stApp::before {{
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 200%;
+    height: 200%;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+        radial-gradient(circle, rgba(134, 239, 172, 0.20) 2px, transparent 3px),
+        radial-gradient(circle, rgba(187, 247, 208, 0.14) 1px, transparent 3px),
+        radial-gradient(circle, rgba(34, 197, 94, 0.12) 2px, transparent 4px);
+    background-size: 120px 120px, 180px 180px, 250px 250px;
+    animation: particulasCampo 35s linear infinite;
+}}
+
+@keyframes particulasCampo {{
+    0% {{
+        transform: translate(0, 0);
+    }}
+    100% {{
+        transform: translate(-250px, -350px);
+    }}
+}}
+
+/* Contenido por encima del fondo */
+.block-container {{
+    position: relative;
+    z-index: 2;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}}
+
+/* Formularios con efecto vidrio */
+[data-testid="stForm"] {{
+    background: rgba(0, 45, 20, 0.58);
+    padding: 28px;
+    border-radius: 24px;
+    border: 1px solid rgba(187, 247, 208, 0.28);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.38);
+}}
+
+/* Métricas tipo tarjeta */
+[data-testid="stMetric"] {{
+    background: rgba(0, 45, 20, 0.42);
+    padding: 18px;
+    border-radius: 18px;
+    border: 1px solid rgba(187, 247, 208, 0.20);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.24);
+}}
+
+/* Tabs */
+button[data-baseweb="tab"] {{
+    background: rgba(0, 45, 20, 0.42);
+    border-radius: 14px;
+    color: white;
+    margin-right: 8px;
+    border: 1px solid rgba(187, 247, 208, 0.18);
+}}
+
+button[data-baseweb="tab"]:hover {{
+    background: rgba(34, 197, 94, 0.25);
+}}
+
+/* Títulos y texto */
+h1, h2, h3, h4, p, label, span {{
+    color: white;
+}}
+
+/* Inputs */
+.stTextInput input,
+.stNumberInput input,
+.stSelectbox div,
+.stMultiSelect div {{
+    border-radius: 12px;
+}}
+
+/* Botones Streamlit */
+.stButton > button {{
+    border-radius: 14px;
+    font-weight: 700;
+    border: none;
+    background: linear-gradient(135deg, #22c55e, #15803d);
+    color: white;
+    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.25);
+}}
+
+.stButton > button:hover {{
+    background: linear-gradient(135deg, #16a34a, #166534);
+    color: white;
+    transform: scale(1.01);
+}}
+
+/* Dataframes y alertas */
+[data-testid="stDataFrame"],
+[data-testid="stAlert"] {{
+    border-radius: 18px;
+}}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {{
+    background: rgba(2, 44, 34, 0.94);
+    border-right: 1px solid rgba(187, 247, 208, 0.20);
+}}
+
+</style>
+""", unsafe_allow_html=True)
+
+# --- HOJAS ANIMADAS ---
+st.markdown("""
+<style>
+
+.hojas-animadas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.hoja {
+    position: absolute;
+    top: -10%;
+    font-size: 24px;
+    opacity: 0.45;
+    animation: caerHojas 16s linear infinite;
+}
+
+.hoja:nth-child(1) { left: 5%; animation-delay: 0s; }
+.hoja:nth-child(2) { left: 18%; animation-delay: 3s; }
+.hoja:nth-child(3) { left: 33%; animation-delay: 6s; }
+.hoja:nth-child(4) { left: 50%; animation-delay: 1s; }
+.hoja:nth-child(5) { left: 66%; animation-delay: 4s; }
+.hoja:nth-child(6) { left: 82%; animation-delay: 8s; }
+.hoja:nth-child(7) { left: 92%; animation-delay: 11s; }
+
+@keyframes caerHojas {
+    0% {
+        transform: translateY(-10vh) translateX(0) rotate(0deg);
+    }
+    50% {
+        transform: translateY(55vh) translateX(35px) rotate(180deg);
+    }
+    100% {
+        transform: translateY(120vh) translateX(-25px) rotate(360deg);
+    }
+}
+
+</style>
+
+<div class="hojas-animadas">
+    <div class="hoja">🌿</div>
+    <div class="hoja">🍃</div>
+    <div class="hoja">🌱</div>
+    <div class="hoja">🍃</div>
+    <div class="hoja">🌿</div>
+    <div class="hoja">🌱</div>
+    <div class="hoja">🍃</div>
+</div>
 """, unsafe_allow_html=True)
 
 # --- MEMORIA DEL SISTEMA ---
@@ -35,32 +270,21 @@ if 'total_litros_hoy' not in st.session_state: st.session_state.total_litros_hoy
 
 DB_CULTIVOS = ["Cerezas", "Uva Vinífera", "Paltos", "Nogales", "Maíz", "Trigo", "Arándanos"]
 
-# --- 🚀 FUNCIÓN DE TWILIO BLINDADA ---
+# --- 🚀 FUNCIÓN DE TWILIO ---
 def enviar_whatsapp_twilio(mensaje, telefono_destino):
     try:
         required_secrets = ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE"]
         faltantes = [secret for secret in required_secrets if secret not in st.secrets]
 
         if faltantes:
-            return False, f"Faltan secrets: {', '.join(faltantes)}"
+            return False, f"Faltan secrets en Streamlit Cloud: {', '.join(faltantes)}"
 
         account_sid = st.secrets["TWILIO_ACCOUNT_SID"]
         auth_token = st.secrets["TWILIO_AUTH_TOKEN"]
-        
-        # BLINDAJE DE FORMATO PARA EVITAR ERRORES DE ENVÍO
-        twilio_phone = str(st.secrets["TWILIO_PHONE"]).strip()
-        if not twilio_phone.startswith("whatsapp:"):
-            twilio_phone = f"whatsapp:{twilio_phone}"
-        # Aseguramos el + que a veces falta
-        if not twilio_phone.replace("whatsapp:", "").startswith("+"):
-            twilio_phone = twilio_phone.replace("whatsapp:", "whatsapp:+")
+        twilio_phone = st.secrets["TWILIO_PHONE"]
 
         client = Client(account_sid, auth_token)
-        message = client.messages.create(
-            body=mensaje, 
-            from_=twilio_phone, 
-            to=f"whatsapp:+{telefono_destino}"
-        )
+        message = client.messages.create(body=mensaje, from_=twilio_phone, to=f"whatsapp:+{telefono_destino}")
         return True, message.sid
     except Exception as e:
         return False, str(e)
@@ -129,36 +353,33 @@ if st.session_state.paso == 'login':
         st.subheader("Acceso Administrativo")
         with st.form("registro_form"):
             nombre = st.text_input("Nombre Completo")
-            email = st.text_input("Correo Electrónico")
             telefono = st.text_input("Teléfono WhatsApp (Ej: 56912345678)")
-            password = st.text_input("Contraseña", type="password")
             submit = st.form_submit_button("Ingresar al Sistema", type="primary", use_container_width=True)
+            
             if submit and nombre and telefono:
                 tel_limpio = ''.join(filter(str.isdigit, telefono))
-                st.session_state.usuario = {'nombre': nombre, 'email': email, 'telefono': tel_limpio}
+                st.session_state.usuario = {'nombre': nombre, 'telefono': tel_limpio}
                 st.session_state.paso = 'onboarding_mapa'
                 st.rerun()
 
 # ==========================================
-# FASE 2: MAPA INTELIGENTE
+# FASE 2: MAPA INTELIGENTE (POR COORDENADAS)
 # ==========================================
 elif st.session_state.paso == 'onboarding_mapa':
     st.header(f"Bienvenido {st.session_state.usuario.get('nombre', '')} - Delimitación Satelital")
     
-    st.write("🔍 **Paso 1:** Busque la región o sector de su terreno para acercar el satélite.")
-    col_search, col_btn = st.columns([3, 1])
-    with col_search:
-        direccion_busqueda = st.text_input("Ingrese ubicación:", label_visibility="collapsed")
+    st.write("🔍 **Paso 1:** Ingrese las coordenadas (Latitud y Longitud) de su terreno para acercar el satélite.")
+    col_lat, col_lon, col_btn = st.columns([2, 2, 1])
+    
+    with col_lat:
+        lat_busqueda = st.number_input("Latitud:", value=-33.45600, format="%.5f")
+    with col_lon:
+        lon_busqueda = st.number_input("Longitud:", value=-70.65000, format="%.5f")
     with col_btn:
-        if st.button("Buscar en Mapa", type="primary", use_container_width=True):
-            if direccion_busqueda:
-                with st.spinner("Localizando..."):
-                    nuevas_coords = buscar_ubicacion(direccion_busqueda)
-                    if nuevas_coords:
-                        st.session_state.mapa_buscador_inicial = nuevas_coords
-                        st.rerun()
-                    else:
-                        st.error("Ubicación no encontrada.")
+        st.write("") # Espaciador para alinear el botón
+        if st.button("Ir a Coordenadas", type="primary", use_container_width=True):
+            st.session_state.mapa_buscador_inicial = [lat_busqueda, lon_busqueda]
+            st.rerun()
 
     st.write("📍 **Paso 2:** Utilice la herramienta de polígono ⬠ para dibujar las fronteras de su parcela.")
     
@@ -292,6 +513,7 @@ elif st.session_state.paso == 'dashboard':
                     st.success(f"✅ Dron en vuelo silencioso. Objetivo: {zona_objetivo}")
                     if litros_usados > 0: st.info(f"💧 Agua calculada: {litros_usados} L. (Ahorro validado)")
                     
+                    # Agregamos a la bitácora de forma silenciosa
                     st.session_state.registro_diario.append({
                         "Hora": f"{hora_actual}:00", "Misión": tipo_mision, "Objetivo": zona_objetivo,
                         "Agua Usada": f"{litros_usados} L", "Estado": "Completado"
