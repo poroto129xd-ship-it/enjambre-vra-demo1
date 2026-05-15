@@ -185,7 +185,7 @@ elif st.session_state.paso == 'dashboard':
         with zonas[2]:
             st.markdown(f'<div class="sensor-rojo"><b>🚨 Zona de Riesgo</b><br>Humedad Suelo: {"22%" if hum_real > 40 else "15% (CRÍTICO)"}<br>Alerta hídrica<br>Requiere Atención</div>', unsafe_allow_html=True)
 
-    # ---------------- PESTAÑA 2: DRON BLOQUEADO CON ZOOM 17 ----------------
+    # ---------------- PESTAÑA 2: DRON BLOQUEADO CON ZOOM 16 ----------------
     with tab2:
         st.header("Centro de Mando Logístico VRA")
         col_ctrl, col_map = st.columns([1, 2])
@@ -223,10 +223,9 @@ elif st.session_state.paso == 'dashboard':
         with col_map:
             st.markdown("**Monitor de Vuelo: Estrés Hídrico Intra-Parcela Zonal**")
             
-            # ELIMINADO EL FIT_BOUNDS. NACEMOS EN EL CENTRO CON ZOOM 17
             mapa_dron = folium.Map(
                 location=st.session_state.centro_mapa, 
-                zoom_start=17, 
+                zoom_start=16, 
                 tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", 
                 attr="Esri", 
                 zoom_control=False, scrollWheelZoom=False, dragging=False, touchZoom=False, doubleClickZoom=False, keyboard=False
