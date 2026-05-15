@@ -46,7 +46,6 @@ def obtener_clima_real(lat, lon):
     except:
         return {"temp": 13.8, "hum": 73, "viento": 1.7}
 
-# MOTOR DE PATRONES DE VUELO
 def calcular_ruta_patron(coords_poligono, patron, lat_centro, lon_centro):
     if not coords_poligono: return []
     ruta = [[lat_centro, lon_centro]] 
@@ -115,7 +114,6 @@ elif st.session_state.paso == 'onboarding_mapa':
             st.session_state.poligono_coords = dibujo["geometry"]["coordinates"][0]
             
             coords_formateadas = [[p[1], p[0]] for p in st.session_state.poligono_coords]
-            # Sacar el punto de cierre duplicado para un centro exacto
             pts_unicos = coords_formateadas[:-1] if coords_formateadas[0] == coords_formateadas[-1] else coords_formateadas
             st.session_state.centro_mapa = [sum(p[0] for p in pts_unicos) / len(pts_unicos), sum(p[1] for p in pts_unicos) / len(pts_unicos)]
             lon_clima, lat_clima = st.session_state.poligono_coords[0][0], st.session_state.poligono_coords[0][1]
@@ -187,6 +185,7 @@ elif st.session_state.paso == 'dashboard':
         with zonas[2]:
             st.markdown(f'<div class="sensor-rojo"><b>🚨 Zona de Riesgo</b><br>Humedad Suelo: {"22%" if hum_real > 40 else "15% (CRÍTICO)"}<br>Alerta hídrica<br>Requiere Atención</div>', unsafe_allow_html=True)
 
+    # ---------------- PESTAÑA 2: DRON BLOQUEADO CON ZOOM 17 ----------------
     with tab2:
         st.header("Centro de Mando Logístico VRA")
         col_ctrl, col_map = st.columns([1, 2])
@@ -223,10 +222,14 @@ elif st.session_state.paso == 'dashboard':
         
         with col_map:
             st.markdown("**Monitor de Vuelo: Estrés Hídrico Intra-Parcela Zonal**")
+            
+            # ELIMINADO EL FIT_BOUNDS. NACEMOS EN EL CENTRO CON ZOOM 17
             mapa_dron = folium.Map(
-                location=st.session_state.centro_mapa, zoom_start=18, 
+                location=st.session_state.centro_mapa, 
+                zoom_start=17, 
                 tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", 
-                attr="Esri", zoom_control=False, scrollWheelZoom=False, dragging=False, touchZoom=False, doubleClickZoom=False, keyboard=False
+                attr="Esri", 
+                zoom_control=False, scrollWheelZoom=False, dragging=False, touchZoom=False, doubleClickZoom=False, keyboard=False
             )
             
             if st.session_state.poligono_coords:
@@ -234,7 +237,6 @@ elif st.session_state.paso == 'dashboard':
                 pts = coords_formateadas[:-1] if coords_formateadas[0] == coords_formateadas[-1] else coords_formateadas
                 n = len(pts)
                 
-                # INTELIGENCIA ESPACIAL: DIVISIÓN EN 3 ZONAS DE MANEJO
                 if n >= 3:
                     c_lat, c_lon = st.session_state.centro_mapa
                     centroide = [c_lat, c_lon]
@@ -250,13 +252,11 @@ elif st.session_state.paso == 'dashboard':
                     folium.Polygon(locations=zona_amarilla, color="yellow", fill=True, fill_color="yellow", fill_opacity=0.45, tooltip="Zona Media: 45% Humedad").add_to(mapa_dron)
                     folium.Polygon(locations=zona_roja, color="red", fill=True, fill_color="red", fill_opacity=0.45, tooltip="Zona Crítica: 22% Humedad").add_to(mapa_dron)
                 else:
-                    # Fallback por si dibujan solo una línea
                     folium.Polygon(locations=coords_formateadas, color="red", fill=True, fill_opacity=0.4).add_to(mapa_dron)
-                
-                mapa_dron.fit_bounds(coords_formateadas)
             
             if ruta_calculada:
                 plugins.AntPath(locations=ruta_calculada, dash_array=[10, 20], delay=800, color=color_ruta, weight=5, pulse_color='white').add_to(mapa_dron)
+            
             st_folium(mapa_dron, width=700, height=400, returned_objects=[])
 
     with tab3:
