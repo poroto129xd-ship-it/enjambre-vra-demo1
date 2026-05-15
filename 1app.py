@@ -737,7 +737,7 @@ elif st.session_state.paso == 'dashboard':
     hr = clima["hum"]
     vr = clima["viento"]
     
-    st.title(f" Dashboard Enjambre VRA | Admin: {st.session_state.usuario.get('nombre', '')}")
+    st.title(f" Dashboard Enjambre VRA | Usuario: {st.session_state.usuario.get('nombre', '')}")
     
     pts_t = [[p[1], p[0]] for p in st.session_state.poligono_coords[:-1]]
     n_pts = len(pts_t)
