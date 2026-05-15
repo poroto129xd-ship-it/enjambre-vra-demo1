@@ -22,15 +22,13 @@ def cargar_imagen_base64(ruta_imagen):
     except FileNotFoundError:
         return None
 
-# --- 🚀 HACK DE JAVASCRIPT: CURSOR DE HORMIGA PROFESIONAL (ESTÁTICO) ---
-# Se utiliza en una sola línea continua para evitar fugas de texto en el renderizador Markdown
-# Se han eliminado las animaciones de movimiento (antWalk) para un look más "Pro"
-st.markdown("""
-<img src="x" style="display:none;" onerror="const doc=window.parent.document; if(!doc.getElementById('ant-cursor')){const ant=doc.createElement('div'); ant.id='ant-cursor'; ant.innerHTML='🐜'; ant.style.position='fixed'; ant.style.pointerEvents='none'; ant.style.zIndex='9999999'; ant.style.fontSize='24px'; doc.body.appendChild(ant); const style=doc.createElement('style'); style.innerHTML='* { cursor: none !important; }'; doc.head.appendChild(style); doc.addEventListener('mousemove', function(e){ ant.style.left=(e.clientX+2)+'px'; ant.style.top=(e.clientY+2)+'px'; });}">
-""", unsafe_allow_html=True)
-
+# --- 🚀 SOLUCIÓN 1: CURSOR DE HORMIGA ESTÁTICO (CSS PURO) ---
 st.markdown("""
     <style>
+    body, .stApp, [data-testid="stAppViewContainer"], * {
+        cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'><text y='24' font-size='24'>🐜</text></svg>") 16 16, auto !important;
+    }
+    
     .sensor-verde { background-color: #d4edda; color: #155724; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; text-align: center; margin-bottom: 10px;}
     .sensor-amarillo { background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border-left: 5px solid #ffc107; text-align: center; margin-bottom: 10px;}
     .sensor-rojo { background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border-left: 5px solid #dc3545; text-align: center; font-weight: bold; margin-bottom: 10px;}
@@ -146,6 +144,8 @@ if 'total_litros_hoy' not in st.session_state: st.session_state.total_litros_hoy
 if 'total_litros_tradicional' not in st.session_state: st.session_state.total_litros_tradicional = 0
 if 'ruta_dron_actual' not in st.session_state: st.session_state.ruta_dron_actual = []
 if 'color_dron_actual' not in st.session_state: st.session_state.color_dron_actual = "cyan"
+if 'mostrar_animacion_dron' not in st.session_state: st.session_state.mostrar_animacion_dron = False
+if 'patron_animacion' not in st.session_state: st.session_state.patron_animacion = ""
 
 # --- 🚀 FUNCIONES MATEMÁTICAS ---
 def calcular_area_poligono(coords):
@@ -331,7 +331,6 @@ elif st.session_state.paso == 'dashboard':
     n_pts = len(pts_t); c = st.session_state.centro_mapa; t1, t2 = n_pts//3, 2*(n_pts//3)
     zonas_v = {"Toda la Parcela": pts_t, "Zona Óptima": [c]+pts_t[0:t1+1]+[c], "Zona Media": [c]+pts_t[t1:t2+1]+[c], "Zona Crítica": [c]+pts_t[t2:]+[pts_t[0], c]}
 
-    # 🚀 SOLUCIÓN 1: Menú Lateral Completo Restaurado
     with st.sidebar:
         st.header("🕒 Cronograma Operativo")
         st.markdown('<div class="horario-auto">💧 <b>05:30 AM</b> - Riego General</div>', unsafe_allow_html=True)
@@ -369,52 +368,81 @@ elif st.session_state.paso == 'dashboard':
             hora_actual = st.slider("Reloj (Simulador):", 0, 23, 14, format="%d:00 hrs")
             tipo_m = st.radio("Misión:", ["Riego de Emergencia", "Nutrición (Proteínas)", "Tratamiento (Anti-plagas)"])
             zona_o = st.selectbox("Objetivo:", list(zonas_v.keys()))
-            
-            # 🚀 SOLUCIÓN 2: Solo Zig-Zag y Perimetral (Centro eliminado)
             patron_vuelo = st.selectbox("Patrón de Despliegue Táctico:", ["Zig-Zag (Cobertura Total)", "Perimetral (Bordes)"])
             
             es_riesgoso = (tipo_m == "Riego de Emergencia" and 10 <= hora_actual <= 18)
             boton_deshabilitado = es_riesgoso and not st.checkbox("Declaro entender los riesgos térmicos.")
             
             if st.button("🚀 DESPLEGAR DRON", type="primary", disabled=boton_deshabilitado, use_container_width=True):
-                # 🚀 CÁLCULO DE AHORRO HÍDRICO (VRA VS TRADICIONAL)
                 if tipo_m == "Riego de Emergencia":
                     litros = round(st.session_state.agua_requerida_total / (1 if zona_o == "Toda la Parcela" else 3), 1)
-                    st.session_state.total_litros_tradicional += st.session_state.agua_requerida_total # Lo que gastaría un tractor regando todo a lo bruto
+                    st.session_state.total_litros_tradicional += st.session_state.agua_requerida_total 
                 else:
                     litros = 0
                 
                 st.session_state.total_litros_hoy += litros
                 st.session_state.color_dron_actual = "cyan" if tipo_m == "Riego de Emergencia" else ("orange" if tipo_m == "Nutrición (Proteínas)" else "red")
-                
-                # Guardamos la ruta en memoria permanente para que no desaparezca
                 st.session_state.ruta_dron_actual = calcular_ruta_patron(zonas_v[zona_o], patron_vuelo, c[0], c[1])
                 
-                # 🚀 SOLUCIÓN 5: SPINNER TÉCNICO PRO (SIN ANIMACIONES JUGUETE)
-                # He eliminado el HTML inyectado del helicóptero volando por la pantalla.
-                with st.spinner(f"🚁 Enjambre VRA desplegado. Ejecutando protocolo autónomo {patron_vuelo} sobre {zona_o}. Analizando telemetría..."):
-                    time.sleep(10) # 10 Segundos de espera técnico-operativa
-                    
-                st.success(f"✅ Misión de {tipo_m} finalizada con éxito en {zona_o}.")
-                if litros > 0: st.info(f"💧 Agua inyectada (Base PLAS): {litros:,.1f} L.")
+                # Activamos la bandera para mostrar la animación del dron sobre el mapa
+                st.session_state.mostrar_animacion_dron = True
+                st.session_state.patron_animacion = patron_vuelo
+                
+                with st.spinner(f"🛰️ Conectando telemetría VRA. Trazando ruta hacia {zona_o}..."):
+                    time.sleep(1.5) # Simulación de conexión técnica, para luego renderizar la animación visual
+                
                 st.session_state.registro_diario.append({"Hora": f"{hora_actual}:00", "Misión": tipo_m, "Zona": zona_o, "Agua": f"{litros} L"})
-        
+                st.rerun() # Forzamos recarga para que el mapa muestre la animación
+                
         with col_m:
+            # 🚀 SOLUCIÓN 2: ANIMACIÓN TÁCTICA DEL DRON (LIMITADA AL MAPA Y SU RECORRIDO)
+            if st.session_state.get('mostrar_animacion_dron', False):
+                st.session_state.mostrar_animacion_dron = False # Se resetea para no repetirse
+                
+                if "Zig-Zag" in st.session_state.patron_animacion:
+                    kf_dron = """
+                    0% { top: 5%; left: 5%; transform: scaleX(1); }
+                    20% { top: 5%; left: 85%; transform: scaleX(1); }
+                    21% { top: 35%; left: 85%; transform: scaleX(-1); }
+                    40% { top: 35%; left: 5%; transform: scaleX(-1); }
+                    41% { top: 65%; left: 5%; transform: scaleX(1); }
+                    60% { top: 65%; left: 85%; transform: scaleX(1); }
+                    61% { top: 90%; left: 85%; transform: scaleX(-1); }
+                    80% { top: 90%; left: 5%; transform: scaleX(-1); }
+                    100% { top: 50%; left: 45%; transform: scaleX(1); }
+                    """
+                else: # Perimetral
+                    kf_dron = """
+                    0% { top: 5%; left: 5%; transform: rotate(0deg); }
+                    25% { top: 5%; left: 85%; transform: rotate(90deg); }
+                    50% { top: 85%; left: 85%; transform: rotate(180deg); }
+                    75% { top: 85%; left: 5%; transform: rotate(270deg); }
+                    100% { top: 5%; left: 5%; transform: rotate(360deg); }
+                    """
+                
+                st.markdown(f"""
+                <div style="position: relative; width: 100%; height: 0px; z-index: 999999;">
+                    <div style="position: absolute; font-size: 45px; animation: droneTacticalFlight 10s linear forwards; pointer-events: none; filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.5));">
+                        🚁
+                    </div>
+                </div>
+                <style>
+                @keyframes droneTacticalFlight {{ {kf_dron} }}
+                </style>
+                """, unsafe_allow_html=True)
+                
+                st.success("✅ Misión VRA finalizada con éxito. Trayectoria guardada en bitácora.")
+            
             map_d = folium.Map(location=c, zoom_start=16, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri")
             
-            # Sectores reales mapeados
             for s in st.session_state.cultivos_mapeados.values():
                 folium.Polygon(locations=s['coords'], color=s['color'], weight=1, fill=True, fill_opacity=0.2, tooltip=f"Cultivo: {s['nombre']}").add_to(map_d)
             
-            # Zonas matemáticas de estrés
             if "Zona Óptima" in zonas_v and len(zonas_v["Zona Óptima"]) > 2:
                 folium.Polygon(locations=zonas_v["Zona Óptima"], color="#28a745", weight=2, fill=True, fill_color="#28a745", fill_opacity=0.45, tooltip="Zona Óptima (>60% Humedad)").add_to(map_d)
                 folium.Polygon(locations=zonas_v["Zona Media"], color="#ffc107", weight=2, fill=True, fill_color="#ffc107", fill_opacity=0.45, tooltip="Zona Media (40-60% Humedad)").add_to(map_d)
                 folium.Polygon(locations=zonas_v["Zona Crítica"], color="#dc3545", weight=2, fill=True, fill_color="#dc3545", fill_opacity=0.55, tooltip="Zona Crítica (<30% Humedad)").add_to(map_d)
 
-            # 🚀 SOLUCIÓN 5: RUTA CARGADA DESDE LA MEMORIA (Así no se apaga)
-            # La ruta `AntPath` ya tiene inherentemente una animación de movimiento ("marching ants")
-            # He añadido delay=800 y pulse_color='white' para que sea aún más visible el movimiento
             if st.session_state.ruta_dron_actual: 
                 plugins.AntPath(locations=st.session_state.ruta_dron_actual, color=st.session_state.color_dron_actual, weight=5, dash_array=[10, 20], delay=800, pulse_color='white').add_to(map_d)
             
@@ -435,7 +463,7 @@ elif st.session_state.paso == 'dashboard':
         
         if not detalles_sectores: detalles_sectores = "  • Sin sectores mapeados\n"
         
-        # 🚀 CÁLCULO FINANCIERO DE AHORRO PARA EL INFORME TWILIO
+        # 🚀 SOLUCIÓN 3: COMPARATIVA FINANCIERA (VRA VS TRADICIONAL)
         ahorro_litros = st.session_state.total_litros_tradicional - st.session_state.total_litros_hoy
         ahorro_porcentaje = (ahorro_litros / st.session_state.total_litros_tradicional * 100) if st.session_state.total_litros_tradicional > 0 else 0
             
