@@ -27,6 +27,8 @@ st.markdown("""
     .sensor-amarillo { background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border-left: 5px solid #ffc107; text-align: center; margin-bottom: 10px;}
     .sensor-rojo { background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border-left: 5px solid #dc3545; text-align: center; font-weight: bold; margin-bottom: 10px;}
     .horario-auto { background-color: #e2e3e5; color: #383d41; padding: 10px; border-radius: 5px; border-left: 5px solid #6c757d; margin-bottom: 5px;}
+    .whatsapp-btn { background-color: #25D366; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; text-align: center; width: 100%;}
+    .whatsapp-btn:hover { background-color: #128C7E; color: white;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -280,14 +282,14 @@ if st.session_state.paso == 'login':
                 st.rerun()
 
 # ==========================================
-# FASE 2: MAPA INTELIGENTE (DIRECCIÓN O COORDENADAS)
+# FASE 2: MAPA INTELIGENTE (DIRECCIÓN Y COORDENADAS)
 # ==========================================
 elif st.session_state.paso == 'onboarding_mapa':
     st.header(f"Bienvenido {st.session_state.usuario.get('nombre', '')} - Delimitación Satelital")
     
     st.write("🔍 **Paso 1:** Busque su terreno para acercar el satélite de forma precisa.")
     
-    # SISTEMA DE PESTAÑAS PARA LA BÚSQUEDA
+    # SISTEMA DE PESTAÑAS (MANTIENE AMBAS OPCIONES COMO PEDISTE)
     tab_dir, tab_coord = st.tabs(["📍 Buscar por Dirección", "🧭 Buscar por Coordenadas"])
     
     with tab_dir:
@@ -295,7 +297,7 @@ elif st.session_state.paso == 'onboarding_mapa':
         with col_search:
             direccion_busqueda = st.text_input("Ingrese ciudad, comuna o región (Ej: Quillota, Chile):")
         with col_btn:
-            st.write("") # Espaciador para alinear el botón
+            st.write("") 
             if st.button("Buscar Dirección", type="primary", use_container_width=True, key="btn_dir"):
                 if direccion_busqueda:
                     with st.spinner("Localizando..."):
@@ -313,17 +315,20 @@ elif st.session_state.paso == 'onboarding_mapa':
         with col_lon:
             lon_busqueda = st.number_input("Longitud:", value=st.session_state.mapa_buscador_inicial[1], format="%.5f")
         with col_btn_coord:
-            st.write("") # Espaciador para alinear el botón
+            st.write("") 
             if st.button("Ir a Coordenadas", type="primary", use_container_width=True, key="btn_coord"):
                 st.session_state.mapa_buscador_inicial = [lat_busqueda, lon_busqueda]
                 st.rerun()
 
-    st.write("📍 **Paso 2:** Utilice la herramienta de polígono ⬠ (esquina superior izquierda del mapa) para dibujar las fronteras de su parcela.")
+    st.write("📍 **Paso 2:** Utilice la herramienta de polígono ⬠ para dibujar las fronteras de su parcela.")
     
+    # SOLUCIÓN DEL CUADRO NEGRO: use_container_width=True en st_folium
     mapa_dibujo = folium.Map(location=st.session_state.mapa_buscador_inicial, zoom_start=15, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri")
     draw = plugins.Draw(export=True, position='topleft', draw_options={'polyline':False, 'marker':False, 'circle':False})
     draw.add_to(mapa_dibujo)
-    mapa_data = st_folium(mapa_dibujo, width=1000, height=400, key="dibujo_inicial")
+    
+    # Aquí está la magia (use_container_width=True asegura que llene la pantalla)
+    mapa_data = st_folium(mapa_dibujo, height=450, use_container_width=True, key="dibujo_inicial")
     
     st.write("📏 **Paso 3:** Ingrese el área total de la zona (Límite máximo).")
     area_ingresada = st.number_input("Área total del predio (m²):", min_value=100, max_value=1000000, value=5000, step=100)
@@ -466,7 +471,9 @@ elif st.session_state.paso == 'dashboard':
                 folium.Polygon(locations=zonas_dict["Toda la Parcela"], color="gray", fill=True, fill_opacity=0.4).add_to(mapa_dron)
             if ruta_calculada:
                 plugins.AntPath(locations=ruta_calculada, dash_array=[10, 20], delay=800, color=color_ruta, weight=5, pulse_color='white').add_to(mapa_dron)
-            st_folium(mapa_dron, width=700, height=400, returned_objects=[])
+            
+            # SOLUCIÓN DEL CUADRO NEGRO (use_container_width=True)
+            st_folium(mapa_dron, height=400, use_container_width=True, returned_objects=[])
 
     # ---------------- PESTAÑA 3: BITÁCORA Y REPORTE EJECUTIVO (SOLO TWILIO) ----------------
     with tab3:
