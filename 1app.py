@@ -57,10 +57,9 @@ def calcular_ruta_patron(coords_poligono, patron, lat_centro, lon_centro):
     
     if patron == "Perimetral (Bordes)":
         ruta.extend(coords_formateadas)
-        ruta.append(coords_formateadas[0]) # Cierra el perímetro
+        ruta.append(coords_formateadas[0]) 
         
     elif patron == "Zig-Zag (Cobertura Total)":
-        # Simulación de barrido Zig-Zag usando los límites del polígono
         lats = [p[0] for p in coords_formateadas]
         lons = [p[1] for p in coords_formateadas]
         min_lat, max_lat = min(lats), max(lats)
@@ -78,7 +77,6 @@ def calcular_ruta_patron(coords_poligono, patron, lat_centro, lon_centro):
                 ruta.append([lat_actual, min_lon])
                 
     elif patron == "Espiral (Foco Central)":
-        # Simulación de espiral desde el centro
         radio_max = 0.001
         for i in range(1, 6):
             r = (radio_max / 5) * i
@@ -89,7 +87,7 @@ def calcular_ruta_patron(coords_poligono, patron, lat_centro, lon_centro):
                 [lat_centro, lon_centro - r]
             ])
             
-    ruta.append([lat_centro, lon_centro]) # Retorno a base
+    ruta.append([lat_centro, lon_centro]) 
     return ruta
 
 # ==========================================
@@ -210,7 +208,7 @@ elif st.session_state.paso == 'dashboard':
         with zonas[2]:
             st.markdown(f'<div class="sensor-rojo"><b>🚨 Zona de Riesgo</b><br>Humedad Suelo: {"22%" if hum_real > 40 else "15% (CRÍTICO)"}<br>Alerta hídrica<br>Requiere Atención</div>', unsafe_allow_html=True)
 
-    # ---------------- PESTAÑA 2: DRON (PATRONES DE VUELO RESTAURADOS) ----------------
+    # ---------------- PESTAÑA 2: DRON FIJADO COMO MONITOR DE SEGURIDAD ----------------
     with tab2:
         st.header("Centro de Mando Logístico VRA")
         col_ctrl, col_map = st.columns([1, 2])
@@ -223,7 +221,6 @@ elif st.session_state.paso == 'dashboard':
             hora_actual = st.slider("Reloj:", 0, 23, 14, format="%d:00 hrs")
             tipo_mision = st.radio("Acción a ejecutar:", ["Riego de Emergencia", "Nutrición (Proteínas)", "Tratamiento (Anti-plagas)"])
             
-            # EL USUARIO AHORA ELIGE EL PATRÓN
             patron_vuelo = st.selectbox("Patrón de Despliegue Táctico:", ["Zig-Zag (Cobertura Total)", "Espiral (Foco Central)", "Perimetral (Bordes)"])
             
             es_riesgoso = (tipo_mision == "Riego de Emergencia" and 10 <= hora_actual <= 18)
@@ -236,10 +233,7 @@ elif st.session_state.paso == 'dashboard':
                 litros_usados = st.session_state.parcela_area * 0.5 if tipo_mision == "Riego de Emergencia" else 0
                 st.session_state.total_litros_hoy += litros_usados
                 
-                # Asignación de color según misión para la ruta
                 color_ruta = "cyan" if tipo_mision == "Riego de Emergencia" else ("orange" if tipo_mision == "Nutrición (Proteínas)" else "red")
-                
-                # Calcular ruta basada en el patrón elegido y el polígono dibujado
                 ruta_calculada = calcular_ruta_patron(st.session_state.poligono_coords, patron_vuelo, st.session_state.centro_mapa[0], st.session_state.centro_mapa[1])
                 
                 with st.spinner(f"Transmitiendo patrón {patron_vuelo} al dron..."):
@@ -254,14 +248,23 @@ elif st.session_state.paso == 'dashboard':
                     })
         
         with col_map:
-            mapa_dron = folium.Map(location=st.session_state.centro_mapa, zoom_start=18, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri")
+            # MAGIA DEL BLOQUEO: Desactivamos zoom_control, scrollWheelZoom y dragging.
+            # Esto fija la cámara permanentemente, como el monitor de una Torre de Control.
+            mapa_dron = folium.Map(
+                location=st.session_state.centro_mapa, 
+                zoom_start=18, 
+                tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", 
+                attr="Esri",
+                zoom_control=False,
+                scrollWheelZoom=False,
+                dragging=False
+            )
             
             if st.session_state.poligono_coords:
                 coords_formateadas = [[p[1], p[0]] for p in st.session_state.poligono_coords]
                 folium.Polygon(locations=coords_formateadas, color="gray", fill=True, fill_color="gray", fill_opacity=0.2).add_to(mapa_dron)
                 mapa_dron.fit_bounds(coords_formateadas)
             
-            # Si se presionó el botón, dibujamos la ruta animada encima de la parcela
             if ruta_calculada:
                 plugins.AntPath(locations=ruta_calculada, dash_array=[10, 20], delay=800, color=color_ruta, weight=5, pulse_color='white').add_to(mapa_dron)
                 
