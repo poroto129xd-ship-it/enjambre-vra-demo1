@@ -10,8 +10,6 @@ import requests
 import base64
 import math
 from twilio.rest import Client
-from folium.elements import MacroElement
-from jinja2 import Template
 
 # --- 1. CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Enjambre VRA | Plataforma Integral", page_icon="🚁", layout="wide")
@@ -148,31 +146,7 @@ if 'ruta_dron_actual' not in st.session_state: st.session_state.ruta_dron_actual
 if 'color_dron_actual' not in st.session_state: st.session_state.color_dron_actual = "cyan"
 if 'mostrar_animacion_dron' not in st.session_state: st.session_state.mostrar_animacion_dron = False
 
-# --- 🚀 CLASE PARA ANIMAR EL DRON EN EL MAPA ---
-class MoveDrone(MacroElement):
-    def __init__(self, coords):
-        super().__init__()
-        self.coords = coords
-        self._template = Template(u"""
-        {% macro script(this, kwargs) %}
-        var coords = {{ this.coords }};
-        if(coords.length > 0){
-            var droneIcon = L.divIcon({html: '<div style="font-size:35px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin-top:-20px; margin-left:-20px;">🚁</div>', className: 'empty'});
-            var droneMarker = L.marker(coords[0], {icon: droneIcon}).addTo({{this._parent.get_name()}});
-            var i = 0;
-            function animateDrone() {
-                if (i < coords.length) {
-                    droneMarker.setLatLng(coords[i]);
-                    i++;
-                    setTimeout(animateDrone, 350); // Velocidad del dron en ms
-                }
-            }
-            setTimeout(animateDrone, 500);
-        }
-        {% endmacro %}
-        """)
-
-# --- 🚀 FUNCIONES MATEMÁTICAS Y DE GEOFENCING ---
+# --- 🚀 FUNCIONES MATEMÁTICAS Y DE CORTE SATELITAL ---
 def punto_en_poligono(x, y, poligono):
     """Algoritmo Ray-Casting para verificar si un punto está dentro de un polígono"""
     n = len(poligono)
@@ -202,6 +176,37 @@ def calcular_area_poligono(coords):
         area += pts_meters[i][0] * pts_meters[j][1]
         area -= pts_meters[j][0] * pts_meters[i][1]
     return abs(area) / 2.0
+
+def calcular_area_interseccion(poly_crop, poly_main):
+    """Calcula matemáticamente el área ignorando todo lo que esté fuera del predio principal"""
+    area_bruta = calcular_area_poligono(poly_crop)
+    if area_bruta == 0: return 0
+    
+    # Cuadrícula de muestreo geoespacial (Grid Approximation)
+    min_x = min(p[0] for p in poly_crop)
+    max_x = max(p[0] for p in poly_crop)
+    min_y = min(p[1] for p in poly_crop)
+    max_y = max(p[1] for p in poly_crop)
+    
+    p_crop = 0
+    p_ambos = 0
+    grid_size = 100 # 10,000 puntos de evaluación milimétrica
+    dx = (max_x - min_x) / grid_size
+    dy = (max_y - min_y) / grid_size
+    if dx == 0 or dy == 0: return area_bruta
+    
+    for i in range(grid_size):
+        x = min_x + i * dx
+        for j in range(grid_size):
+            y = min_y + j * dy
+            if punto_en_poligono(x, y, poly_crop):
+                p_crop += 1
+                if punto_en_poligono(x, y, poly_main):
+                    p_ambos += 1
+                    
+    if p_crop == 0: return 0
+    porcentaje_adentro = p_ambos / p_crop
+    return area_bruta * porcentaje_adentro
 
 def enviar_whatsapp_twilio(mensaje, telefono_destino):
     try:
@@ -305,7 +310,7 @@ elif st.session_state.paso == 'onboarding_mapa':
             st.session_state.paso = 'onboarding_cultivos'; st.rerun()
 
 # ==========================================
-# FASE 3: MAPEADOR INTERACTIVO PLAS (CON RESTRICCIÓN)
+# FASE 3: MAPEADOR INTERACTIVO PLAS (RECORTA EXCESOS)
 # ==========================================
 elif st.session_state.paso == 'onboarding_cultivos':
     st.header("🌾 Fase PLAS: Mapeo de Sectores Productivos")
@@ -324,25 +329,24 @@ elif st.session_state.paso == 'onboarding_cultivos':
         
         if st.button("💾 GUARDAR SECTOR MAPEADO", use_container_width=True):
             if 'temp_coords' in st.session_state and st.session_state.temp_coords:
-                # 🚀 SOLUCIÓN 1: GEOFENCING ESTRICTO
-                fuera_del_predio = False
-                for pt in st.session_state.temp_coords:
-                    if not punto_en_poligono(pt[0], pt[1], st.session_state.poligono_coords):
-                        fuera_del_predio = True
-                        break
+                # 🚀 SOLUCIÓN 1: CÁLCULO INTELIGENTE QUE IGNORA LO QUE ESTÁ FUERA
+                area_real_adentro = calcular_area_interseccion(st.session_state.temp_coords, st.session_state.poligono_coords)
+                area_dibujada = calcular_area_poligono(st.session_state.temp_coords)
                 
-                if fuera_del_predio:
-                    st.error("❌ ERROR: Parte del cultivo está fuera de los límites del predio. Por favor dibújalo estrictamente dentro del terreno.")
+                if area_real_adentro <= 0:
+                    st.error("❌ ERROR: El polígono está completamente fuera del predio. Dibújalo dentro.")
                 else:
-                    area_s = calcular_area_poligono(st.session_state.temp_coords)
                     st.session_state.cultivos_mapeados[f"{tipo_cultivo}_{time.time()}"] = {
                         'nombre': tipo_cultivo,
                         'coords': [[p[1], p[0]] for p in st.session_state.temp_coords],
-                        'area': area_s,
-                        'agua': area_s * req_h,
+                        'area': area_real_adentro, # Solo se guardan los m2 reales utilizables
+                        'agua': area_real_adentro * req_h,
                         'color': color_c
                     }
-                    st.success(f"✅ Sector de {tipo_cultivo} guardado con éxito.")
+                    if area_real_adentro < (area_dibujada * 0.98): # Si se salió un poco de la raya
+                        st.warning(f"⚠️ Nota de Corrección: Parte del dibujo estaba fuera del límite. El sistema ajustó y solo validó {area_real_adentro:,.0f} m² internos.")
+                    else:
+                        st.success(f"✅ Sector de {tipo_cultivo} guardado con éxito.")
                     st.rerun()
             else: st.warning("Por favor, dibuje el polígono del sector antes de guardar.")
 
@@ -388,6 +392,20 @@ elif st.session_state.paso == 'dashboard':
         st.markdown('<div class="horario-auto">💧 <b>05:30 AM</b> - Riego General</div>', unsafe_allow_html=True)
         st.markdown('<div class="horario-auto">🧪 <b>08:00 AM</b> - Aplicación Vitaminas</div>', unsafe_allow_html=True)
         st.markdown('<div class="horario-auto">🛡️ <b>06:00 PM</b> - Control Antiplagas</div>', unsafe_allow_html=True)
+        
+        # 🚀 SOLUCIÓN 2: MINI EVALUACIÓN (BALANCE DE SUPERFICIE) EN LA BARRA LATERAL
+        st.markdown("---")
+        st.header("📊 Balance de Superficie")
+        area_t = st.session_state.parcela_area
+        area_u = sum(v['area'] for v in st.session_state.cultivos_mapeados.values())
+        area_l = max(0, area_t - area_u)
+        
+        st.write(f"**📍 Área Total:** {area_t:,.0f} m²")
+        st.write(f"**✅ Área Utilizada:** {area_u:,.0f} m²")
+        for k, v in st.session_state.cultivos_mapeados.items():
+            st.markdown(f"<div style='padding-left: 20px; font-size: 14px;'>🌱 {v['nombre']}: {v['area']:,.0f} m²</div>", unsafe_allow_html=True)
+        st.write(f"**⬜ Área Libre:** {area_l:,.0f} m²")
+        st.progress(min(area_u / area_t, 1.0) if area_t > 0 else 0.0)
 
     tab1, tab2, tab3 = st.tabs(["🌱 Sensores", "🚁 Logística Dron", "📈 Reporte Maestro"])
     
@@ -420,6 +438,7 @@ elif st.session_state.paso == 'dashboard':
             hora_actual = st.slider("Reloj (Simulador):", 0, 23, 14, format="%d:00 hrs")
             tipo_m = st.radio("Misión:", ["Riego de Emergencia", "Nutrición (Proteínas)", "Tratamiento (Anti-plagas)"])
             zona_o = st.selectbox("Objetivo:", list(zonas_v.keys()))
+            
             patron_vuelo = st.selectbox("Patrón de Despliegue Táctico:", ["Zig-Zag (Cobertura Total)", "Perimetral (Bordes)"])
             
             es_riesgoso = (tipo_m == "Riego de Emergencia" and 10 <= hora_actual <= 18)
@@ -439,20 +458,19 @@ elif st.session_state.paso == 'dashboard':
                     litros_trad = (agua_base * 0.15) * factor_zona
                     litros_vr = (agua_base * 0.15) * 0.08 * factor_zona
 
-                litros_trad = round(litros_trad, 1)
-                litros_vr = round(litros_vr, 1)
-
-                st.session_state.total_litros_tradicional += litros_trad
-                st.session_state.total_litros_hoy += litros_vr
+                st.session_state.total_litros_tradicional += round(litros_trad, 1)
+                st.session_state.total_litros_hoy += round(litros_vr, 1)
                 
                 st.session_state.color_dron_actual = "cyan" if tipo_m == "Riego de Emergencia" else ("orange" if tipo_m == "Nutrición (Proteínas)" else "red")
                 st.session_state.ruta_dron_actual = calcular_ruta_patron(zonas_v[zona_o], patron_vuelo, c[0], c[1])
                 
-                # 🚀 SOLUCIÓN 2: PREPARAMOS LA BANDERA PARA QUE EL MAPA ANIME EL DRON
+                # Activamos la bandera para mostrar el recorrido del dron
                 st.session_state.mostrar_animacion_dron = True
                 
-                st.toast("🛰️ Dron en operación. Revisa el mapa para seguir la trayectoria.", icon="🚁")
-                st.session_state.registro_diario.append({"Hora": f"{hora_actual}:00", "Misión": tipo_m, "Zona": zona_o, "Agua": f"{litros_vr} L"})
+                with st.spinner(f"🛰️ Conectando telemetría VRA. Trazando ruta hacia {zona_o}..."):
+                    time.sleep(1.5)
+                
+                st.session_state.registro_diario.append({"Hora": f"{hora_actual}:00", "Misión": tipo_m, "Zona": zona_o, "Agua": f"{round(litros_vr, 1)} L"})
                 st.rerun() 
                 
         with col_m:
@@ -469,12 +487,11 @@ elif st.session_state.paso == 'dashboard':
             if st.session_state.ruta_dron_actual: 
                 plugins.AntPath(locations=st.session_state.ruta_dron_actual, color=st.session_state.color_dron_actual, weight=5, dash_array=[10, 20], delay=800, pulse_color='white').add_to(map_d)
                 
-                # 🚀 SOLUCIÓN 2: INYECTAMOS EL SCRIPT DEL DRON ANIMADO SI CORRESPONDE
-                if st.session_state.get('mostrar_animacion_dron', False):
-                    map_d.get_root().add_child(MoveDrone(st.session_state.ruta_dron_actual))
-                    st.session_state.mostrar_animacion_dron = False # Lo apagamos para que vuele solo una vez por clic
-            
             st_folium(map_d, height=450, use_container_width=True)
+            
+            if st.session_state.get('mostrar_animacion_dron', False):
+                st.session_state.mostrar_animacion_dron = False
+                st.success("✅ Misión VRA finalizada. Trayectoria ejecutada y guardada en bitácora.")
 
     with tab3:
         st.header("Reporte Ejecutivo Twilio")
@@ -528,3 +545,4 @@ _Generado automáticamente por Inteligencia Geoespacial PLAS._"""
             exito, sid = enviar_whatsapp_twilio(msg_profesional, st.session_state.usuario.get('telefono', ''))
             if exito: st.success(f"Reporte enviado con éxito al celular registrado. SID: {sid}")
             else: st.error(f"Error de envío. Revisa credenciales: {sid}")
+                
