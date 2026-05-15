@@ -22,10 +22,11 @@ def cargar_imagen_base64(ruta_imagen):
     except FileNotFoundError:
         return None
 
-# --- 🚀 HACK DE JAVASCRIPT: CURSOR DE HORMIGA ANIMADA (CORREGIDO) ---
+# --- 🚀 HACK DE JAVASCRIPT: CURSOR DE HORMIGA PROFESIONAL (ESTÁTICO) ---
 # Se utiliza en una sola línea continua para evitar fugas de texto en el renderizador Markdown
+# Se han eliminado las animaciones de movimiento (antWalk) para un look más "Pro"
 st.markdown("""
-<img src="x" style="display:none;" onerror="const doc=window.parent.document; if(!doc.getElementById('ant-cursor')){const ant=doc.createElement('div'); ant.id='ant-cursor'; ant.innerHTML='🐜'; ant.style.position='fixed'; ant.style.pointerEvents='none'; ant.style.zIndex='9999999'; ant.style.fontSize='24px'; doc.body.appendChild(ant); const style=doc.createElement('style'); style.innerHTML='* { cursor: none !important; } @keyframes antWalk { 0% { transform: rotate(-15deg); margin-left: 0px; } 50% { transform: rotate(15deg); margin-left: 3px; } 100% { transform: rotate(-15deg); margin-left: 0px; } } #ant-cursor { animation: antWalk 0.2s infinite; }'; doc.head.appendChild(style); doc.addEventListener('mousemove', function(e){ ant.style.left=(e.clientX+2)+'px'; ant.style.top=(e.clientY+2)+'px'; });}">
+<img src="x" style="display:none;" onerror="const doc=window.parent.document; if(!doc.getElementById('ant-cursor')){const ant=doc.createElement('div'); ant.id='ant-cursor'; ant.innerHTML='🐜'; ant.style.position='fixed'; ant.style.pointerEvents='none'; ant.style.zIndex='9999999'; ant.style.fontSize='24px'; doc.body.appendChild(ant); const style=doc.createElement('style'); style.innerHTML='* { cursor: none !important; }'; doc.head.appendChild(style); doc.addEventListener('mousemove', function(e){ ant.style.left=(e.clientX+2)+'px'; ant.style.top=(e.clientY+2)+'px'; });}">
 """, unsafe_allow_html=True)
 
 st.markdown("""
@@ -300,6 +301,7 @@ elif st.session_state.paso == 'onboarding_cultivos':
         
         if st.session_state.cultivos_mapeados:
             if st.button("✅ FINALIZAR MAPEADO E IR AL DASHBOARD", type="primary", use_container_width=True):
+                st.session_state.cultivos_asignados = {v['nombre']: v['area'] for v in st.session_state.cultivos_mapeados.values()}
                 st.session_state.agua_requerida_total = sum(v['agua'] for v in st.session_state.cultivos_mapeados.values())
                 st.session_state.paso = 'dashboard'; st.rerun()
 
@@ -329,10 +331,12 @@ elif st.session_state.paso == 'dashboard':
     n_pts = len(pts_t); c = st.session_state.centro_mapa; t1, t2 = n_pts//3, 2*(n_pts//3)
     zonas_v = {"Toda la Parcela": pts_t, "Zona Óptima": [c]+pts_t[0:t1+1]+[c], "Zona Media": [c]+pts_t[t1:t2+1]+[c], "Zona Crítica": [c]+pts_t[t2:]+[pts_t[0], c]}
 
+    # 🚀 SOLUCIÓN 1: Menú Lateral Completo Restaurado
     with st.sidebar:
-        st.header("🕒 Cronograma")
-        st.markdown('<div class="horario-auto">💧 05:30 AM - Riego</div>', unsafe_allow_html=True)
-        st.markdown('<div class="horario-auto">🛡️ 06:00 PM - Control</div>', unsafe_allow_html=True)
+        st.header("🕒 Cronograma Operativo")
+        st.markdown('<div class="horario-auto">💧 <b>05:30 AM</b> - Riego General</div>', unsafe_allow_html=True)
+        st.markdown('<div class="horario-auto">🧪 <b>08:00 AM</b> - Aplicación Vitaminas</div>', unsafe_allow_html=True)
+        st.markdown('<div class="horario-auto">🛡️ <b>06:00 PM</b> - Control Antiplagas</div>', unsafe_allow_html=True)
 
     tab1, tab2, tab3 = st.tabs(["🌱 Sensores", "🚁 Logística Dron", "📈 Reporte Maestro"])
     
@@ -365,6 +369,8 @@ elif st.session_state.paso == 'dashboard':
             hora_actual = st.slider("Reloj (Simulador):", 0, 23, 14, format="%d:00 hrs")
             tipo_m = st.radio("Misión:", ["Riego de Emergencia", "Nutrición (Proteínas)", "Tratamiento (Anti-plagas)"])
             zona_o = st.selectbox("Objetivo:", list(zonas_v.keys()))
+            
+            # 🚀 SOLUCIÓN 2: Solo Zig-Zag y Perimetral (Centro eliminado)
             patron_vuelo = st.selectbox("Patrón de Despliegue Táctico:", ["Zig-Zag (Cobertura Total)", "Perimetral (Bordes)"])
             
             es_riesgoso = (tipo_m == "Riego de Emergencia" and 10 <= hora_actual <= 18)
@@ -380,30 +386,14 @@ elif st.session_state.paso == 'dashboard':
                 
                 st.session_state.total_litros_hoy += litros
                 st.session_state.color_dron_actual = "cyan" if tipo_m == "Riego de Emergencia" else ("orange" if tipo_m == "Nutrición (Proteínas)" else "red")
+                
+                # Guardamos la ruta en memoria permanente para que no desaparezca
                 st.session_state.ruta_dron_actual = calcular_ruta_patron(zonas_v[zona_o], patron_vuelo, c[0], c[1])
                 
-                # 🚀 ANIMACIÓN DEL DRON VOLANDO EN PANTALLA
-                animacion_dron_html = """
-                <div style="position: fixed; top: 40%; left: -10%; z-index: 999999; font-size: 80px; animation: flyDrone 10s linear forwards;">
-                    🚁
-                </div>
-                <style>
-                @keyframes flyDrone {
-                    0% { left: -10%; transform: rotate(15deg) translateY(0px); }
-                    25% { transform: rotate(-5deg) translateY(-40px); }
-                    50% { transform: rotate(15deg) translateY(20px); }
-                    75% { transform: rotate(-5deg) translateY(-20px); }
-                    100% { left: 110%; transform: rotate(0deg) translateY(0px); }
-                }
-                </style>
-                """
-                espacio_animacion = st.empty()
-                espacio_animacion.markdown(animacion_dron_html, unsafe_allow_html=True)
-                
-                with st.spinner(f"🚁 Dron en operación sobre {zona_o}. Ejecutando patrón {patron_vuelo}..."):
-                    time.sleep(10) # 10 Segundos exactos de vuelo
-                
-                espacio_animacion.empty() # Limpiamos el dron volador
+                # 🚀 SOLUCIÓN 5: SPINNER TÉCNICO PRO (SIN ANIMACIONES JUGUETE)
+                # He eliminado el HTML inyectado del helicóptero volando por la pantalla.
+                with st.spinner(f"🚁 Enjambre VRA desplegado. Ejecutando protocolo autónomo {patron_vuelo} sobre {zona_o}. Analizando telemetría..."):
+                    time.sleep(10) # 10 Segundos de espera técnico-operativa
                     
                 st.success(f"✅ Misión de {tipo_m} finalizada con éxito en {zona_o}.")
                 if litros > 0: st.info(f"💧 Agua inyectada (Base PLAS): {litros:,.1f} L.")
@@ -412,14 +402,19 @@ elif st.session_state.paso == 'dashboard':
         with col_m:
             map_d = folium.Map(location=c, zoom_start=16, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri")
             
+            # Sectores reales mapeados
             for s in st.session_state.cultivos_mapeados.values():
                 folium.Polygon(locations=s['coords'], color=s['color'], weight=1, fill=True, fill_opacity=0.2, tooltip=f"Cultivo: {s['nombre']}").add_to(map_d)
             
+            # Zonas matemáticas de estrés
             if "Zona Óptima" in zonas_v and len(zonas_v["Zona Óptima"]) > 2:
                 folium.Polygon(locations=zonas_v["Zona Óptima"], color="#28a745", weight=2, fill=True, fill_color="#28a745", fill_opacity=0.45, tooltip="Zona Óptima (>60% Humedad)").add_to(map_d)
                 folium.Polygon(locations=zonas_v["Zona Media"], color="#ffc107", weight=2, fill=True, fill_color="#ffc107", fill_opacity=0.45, tooltip="Zona Media (40-60% Humedad)").add_to(map_d)
                 folium.Polygon(locations=zonas_v["Zona Crítica"], color="#dc3545", weight=2, fill=True, fill_color="#dc3545", fill_opacity=0.55, tooltip="Zona Crítica (<30% Humedad)").add_to(map_d)
 
+            # 🚀 SOLUCIÓN 5: RUTA CARGADA DESDE LA MEMORIA (Así no se apaga)
+            # La ruta `AntPath` ya tiene inherentemente una animación de movimiento ("marching ants")
+            # He añadido delay=800 y pulse_color='white' para que sea aún más visible el movimiento
             if st.session_state.ruta_dron_actual: 
                 plugins.AntPath(locations=st.session_state.ruta_dron_actual, color=st.session_state.color_dron_actual, weight=5, dash_array=[10, 20], delay=800, pulse_color='white').add_to(map_d)
             
