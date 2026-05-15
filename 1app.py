@@ -33,7 +33,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- DISEÑO VISUAL: FONDO AGRÍCOLA ANIMADO ---
-# Recuerda: crear carpeta 'assets' y poner imagen 'fondo_campo.jpg' adentro
 fondo_base64 = cargar_imagen_base64("assets/fondo_campo.jpg")
 
 if fondo_base64:
@@ -57,16 +56,15 @@ else:
         linear-gradient(135deg, #052e16 0%, #064e3b 45%, #022c22 100%);
     """
 
-# --- INYECCIÓN DE ESTILOS (REPARADO) ---
 st.markdown(f"""
 <style>
-
 /* Ocultar elementos visuales de Streamlit */
 #MainMenu {{ visibility: hidden; }}
 footer {{ visibility: hidden; }}
-header {{ visibility: hidden; }}
+/* LA SOLUCIÓN: Cabecera transparente para que el botón de la esquina superior izquierda se pueda clickear */
+header {{ background: transparent !important; }}
 
-/* Fondo principal agrícola con movimiento (Línea reparada) */
+/* Fondo principal agrícola con movimiento */
 .stApp {{
     {fondo_css}
     color: white;
@@ -292,7 +290,6 @@ elif st.session_state.paso == 'onboarding_mapa':
     
     st.write("🔍 **Paso 1:** Busque su terreno para acercar el satélite de forma precisa.")
     
-    # SISTEMA DE PESTAÑAS (MANTIENE AMBAS OPCIONES COMO PEDISTE)
     tab_dir, tab_coord = st.tabs(["📍 Buscar por Dirección", "🧭 Buscar por Coordenadas"])
     
     with tab_dir:
@@ -325,12 +322,10 @@ elif st.session_state.paso == 'onboarding_mapa':
 
     st.write("📍 **Paso 2:** Utilice la herramienta de polígono ⬠ para dibujar las fronteras de su parcela.")
     
-    # SOLUCIÓN DEL CUADRO NEGRO: use_container_width=True en st_folium
     mapa_dibujo = folium.Map(location=st.session_state.mapa_buscador_inicial, zoom_start=15, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri")
     draw = plugins.Draw(export=True, position='topleft', draw_options={'polyline':False, 'marker':False, 'circle':False})
     draw.add_to(mapa_dibujo)
     
-    # Aquí está la magia (use_container_width=True asegura que llene la pantalla)
     mapa_data = st_folium(mapa_dibujo, height=450, use_container_width=True, key="dibujo_inicial")
     
     st.write("📏 **Paso 3:** Ingrese el área total de la zona (Límite máximo).")
@@ -385,7 +380,7 @@ elif st.session_state.paso == 'onboarding_cultivos':
 # FASE 4: DASHBOARD PRINCIPAL
 # ==========================================
 elif st.session_state.paso == 'dashboard':
-    st.title(f" Dashboard Enjambre VRA | Usuario: {st.session_state.usuario.get('nombre', '')}")
+    st.title(f"📊 Dashboard Enjambre VRA | Admin: {st.session_state.usuario.get('nombre', '')}")
     
     zonas_dict = {}
     if st.session_state.poligono_coords:
@@ -402,6 +397,7 @@ elif st.session_state.paso == 'dashboard':
             zonas_dict["Zona Media (Amarilla)"] = [centroide] + pts[t1:t2+1] + [centroide]
             zonas_dict["Zona Crítica (Roja)"] = [centroide] + pts[t2:] + [pts[0], centroide]
 
+    # --- BARRA LATERAL RESTAURADA PARA VER HORARIOS AUTÓNOMOS ---
     with st.sidebar:
         st.header("🕒 Cronograma Operativo")
         st.markdown('<div class="horario-auto">💧 <b>05:30 AM</b> - Riego General</div>', unsafe_allow_html=True)
@@ -475,7 +471,6 @@ elif st.session_state.paso == 'dashboard':
             if ruta_calculada:
                 plugins.AntPath(locations=ruta_calculada, dash_array=[10, 20], delay=800, color=color_ruta, weight=5, pulse_color='white').add_to(mapa_dron)
             
-            # SOLUCIÓN DEL CUADRO NEGRO (use_container_width=True)
             st_folium(mapa_dron, height=400, use_container_width=True, returned_objects=[])
 
     # ---------------- PESTAÑA 3: BITÁCORA Y REPORTE EJECUTIVO (SOLO TWILIO) ----------------
@@ -523,18 +518,10 @@ _Generado automáticamente por Enjambre VRA._"""
         
         st.text_area("Previsualización del Mensaje:", value=resumen_texto_profesional, height=450, disabled=True)
         
-        col_w1, col_w2 = st.columns(2)
-        
-        with col_w1:
-            if st.button("🚀 Enviar Reporte Oficial por Twilio", type="primary", use_container_width=True):
-                with st.spinner("Conectando con servidores de Twilio..."):
-                    exito, msj = enviar_whatsapp_twilio(resumen_texto_profesional, st.session_state.usuario.get('telefono', ''))
-                    if exito: 
-                        st.success("✅ Mensaje enviado con éxito a tu celular vía API.")
-                    else: 
-                        st.error(f"❌ Falló el envío. Revisa tus Secrets o Sandbox de Twilio: {msj}")
-        
-        with col_w2:
-            # Botón de respaldo (el antiguo que abre WhatsApp Web)
-            link_whatsapp = f"https://api.whatsapp.com/send?phone={st.session_state.usuario.get('telefono', '')}&text={urllib.parse.quote(resumen_texto_profesional)}"
-            st.markdown(f'<a href="{link_whatsapp}" target="_blank" class="whatsapp-btn">Apertura Manual en WhatsApp Web</a>', unsafe_allow_html=True)
+        if st.button("🚀 Enviar Reporte Oficial por Twilio", type="primary", use_container_width=True):
+            with st.spinner("Conectando con servidores de Twilio..."):
+                exito, msj = enviar_whatsapp_twilio(resumen_texto_profesional, st.session_state.usuario.get('telefono', ''))
+                if exito: 
+                    st.success("✅ Mensaje enviado con éxito a tu celular vía API.")
+                else: 
+                    st.error(f"❌ Falló el envío. Revisa tus Secrets o Sandbox de Twilio: {msj}")
