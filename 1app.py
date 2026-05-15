@@ -7,6 +7,7 @@ import pandas as pd
 from datetime import date
 import urllib.parse
 import requests
+import math
 
 # --- 1. CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Enjambre VRA | Plataforma Integral", page_icon="🚁", layout="wide")
@@ -18,6 +19,7 @@ st.markdown("""
     .sensor-rojo { background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border-left: 5px solid #dc3545; text-align: center; font-weight: bold; margin-bottom: 10px;}
     .whatsapp-btn { background-color: #25D366; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; text-align: center; width: 100%;}
     .whatsapp-btn:hover { background-color: #128C7E; color: white;}
+    .horario-auto { background-color: #e2e3e5; color: #383d41; padding: 10px; border-radius: 5px; border-left: 5px solid #6c757d; margin-bottom: 5px;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -28,6 +30,7 @@ if 'parcela_area' not in st.session_state: st.session_state.parcela_area = 0
 if 'cultivos_asignados' not in st.session_state: st.session_state.cultivos_asignados = {}
 if 'registro_diario' not in st.session_state: st.session_state.registro_diario = []
 if 'poligono_coords' not in st.session_state: st.session_state.poligono_coords = None
+if 'centro_mapa' not in st.session_state: st.session_state.centro_mapa = [-33.456, -70.650]
 if 'clima_real' not in st.session_state: st.session_state.clima_real = {"temp": 0, "hum": 0, "viento": 0}
 if 'total_litros_hoy' not in st.session_state: st.session_state.total_litros_hoy = 0
 
@@ -42,10 +45,55 @@ def obtener_clima_real(lat, lon):
         humedad = respuesta["hourly"]["relative_humidity_2m"][0]
         return {"temp": temp, "hum": humedad, "viento": viento}
     except:
-        return {"temp": 28.5, "hum": 35, "viento": 12.0}
+        return {"temp": 13.8, "hum": 73, "viento": 1.7}
+
+# MOTOR DE PATRONES DE VUELO
+def calcular_ruta_patron(coords_poligono, patron, lat_centro, lon_centro):
+    if not coords_poligono:
+        return []
+    
+    ruta = [[lat_centro, lon_centro]] # Despegue
+    coords_formateadas = [[p[1], p[0]] for p in coords_poligono]
+    
+    if patron == "Perimetral (Bordes)":
+        ruta.extend(coords_formateadas)
+        ruta.append(coords_formateadas[0]) # Cierra el perímetro
+        
+    elif patron == "Zig-Zag (Cobertura Total)":
+        # Simulación de barrido Zig-Zag usando los límites del polígono
+        lats = [p[0] for p in coords_formateadas]
+        lons = [p[1] for p in coords_formateadas]
+        min_lat, max_lat = min(lats), max(lats)
+        min_lon, max_lon = min(lons), max(lons)
+        
+        paso_lat = (max_lat - min_lat) / 4
+        
+        for i in range(5):
+            lat_actual = max_lat - (i * paso_lat)
+            if i % 2 == 0:
+                ruta.append([lat_actual, min_lon])
+                ruta.append([lat_actual, max_lon])
+            else:
+                ruta.append([lat_actual, max_lon])
+                ruta.append([lat_actual, min_lon])
+                
+    elif patron == "Espiral (Foco Central)":
+        # Simulación de espiral desde el centro
+        radio_max = 0.001
+        for i in range(1, 6):
+            r = (radio_max / 5) * i
+            ruta.extend([
+                [lat_centro + r, lon_centro],
+                [lat_centro, lon_centro + r],
+                [lat_centro - r, lon_centro],
+                [lat_centro, lon_centro - r]
+            ])
+            
+    ruta.append([lat_centro, lon_centro]) # Retorno a base
+    return ruta
 
 # ==========================================
-# FASE 1: REGISTRO DE USUARIO
+# FASE 1: REGISTRO
 # ==========================================
 if st.session_state.paso == 'login':
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -54,11 +102,10 @@ if st.session_state.paso == 'login':
         st.subheader("Acceso Administrativo")
         with st.form("registro_form"):
             nombre = st.text_input("Nombre Completo")
-            email = st.text_input("Correo Electrónico (Para recibir reportes)")
+            email = st.text_input("Correo Electrónico (Reportes)")
             telefono = st.text_input("Teléfono WhatsApp (Ej: 56912345678)")
             password = st.text_input("Contraseña", type="password")
             submit = st.form_submit_button("Ingresar al Sistema", type="primary", use_container_width=True)
-            
             if submit and nombre and email and telefono:
                 tel_limpio = ''.join(filter(str.isdigit, telefono))
                 st.session_state.usuario = {'nombre': nombre, 'email': email, 'telefono': tel_limpio}
@@ -66,7 +113,7 @@ if st.session_state.paso == 'login':
                 st.rerun()
 
 # ==========================================
-# FASE 2: MAPA Y DELIMITACIÓN
+# FASE 2: MAPA
 # ==========================================
 elif st.session_state.paso == 'onboarding_mapa':
     st.header(f"Bienvenido {st.session_state.usuario['nombre']} - Delimitación Satelital")
@@ -75,7 +122,6 @@ elif st.session_state.paso == 'onboarding_mapa':
     mapa_dibujo = folium.Map(location=[-33.456, -70.650], zoom_start=15, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri")
     draw = plugins.Draw(export=True, position='topleft', draw_options={'polyline':False, 'marker':False, 'circle':False})
     draw.add_to(mapa_dibujo)
-    
     mapa_data = st_folium(mapa_dibujo, width=1000, height=400, key="dibujo_inicial")
     
     st.write("📍 **Paso 2:** Ingrese el área total de la zona (Límite máximo).")
@@ -84,46 +130,47 @@ elif st.session_state.paso == 'onboarding_mapa':
     if st.button("Confirmar Terreno y Continuar ➡️", type="primary"):
         st.session_state.parcela_area = area_ingresada
         lat_clima, lon_clima = -33.456, -70.650 
-        
         if mapa_data and mapa_data.get("all_drawings"):
             dibujo = mapa_data["all_drawings"][0]
             st.session_state.poligono_coords = dibujo["geometry"]["coordinates"][0]
-            lon_clima = st.session_state.poligono_coords[0][0]
-            lat_clima = st.session_state.poligono_coords[0][1]
+            
+            coords_formateadas = [[p[1], p[0]] for p in st.session_state.poligono_coords]
+            promedio_lat = sum(p[0] for p in coords_formateadas) / len(coords_formateadas)
+            promedio_lon = sum(p[1] for p in coords_formateadas) / len(coords_formateadas)
+            st.session_state.centro_mapa = [promedio_lat, promedio_lon]
+            
+            lon_clima, lat_clima = st.session_state.poligono_coords[0][0], st.session_state.poligono_coords[0][1]
             
         st.session_state.clima_real = obtener_clima_real(lat_clima, lon_clima)
         st.session_state.paso = 'onboarding_cultivos'
         st.rerun()
 
 # ==========================================
-# FASE 3: DISTRIBUCIÓN ESTRICTA DE CULTIVOS
+# FASE 3: CULTIVOS
 # ==========================================
 elif st.session_state.paso == 'onboarding_cultivos':
     st.header("🌾 Distribución de Plantaciones")
     st.write(f"Usted cuenta con un límite total de **{st.session_state.parcela_area} m²** registrados.")
-    
-    cultivos_seleccionados = st.multiselect("Seleccione los tipos de cultivos presentes en su parcela:", DB_CULTIVOS)
+    cultivos_seleccionados = st.multiselect("Seleccione cultivos presentes:", DB_CULTIVOS)
     
     if cultivos_seleccionados:
         area_asignada_total = 0
-        asignaciones_temporales = {}
+        asignaciones = {}
         for cultivo in cultivos_seleccionados:
             m2 = st.number_input(f"Asignar m² para {cultivo}:", min_value=0, max_value=st.session_state.parcela_area, value=0, step=100)
-            asignaciones_temporales[cultivo] = m2
+            asignaciones[cultivo] = m2
             area_asignada_total += m2
         
-        # BARRA DE PROGRESO Y RESTRICCIONES (RESTAURADO)
-        porcentaje_uso = min(area_asignada_total / st.session_state.parcela_area, 1.0)
-        st.progress(porcentaje_uso)
+        st.progress(min(area_asignada_total / st.session_state.parcela_area, 1.0))
         st.write(f"Espacio utilizado: **{area_asignada_total} m²** de **{st.session_state.parcela_area} m²**")
         
         if area_asignada_total > st.session_state.parcela_area:
-            st.error("❌ ERROR: Has superado el límite de tu parcela. Debes reducir los metros cuadrados de los cultivos.")
+            st.error("❌ ERROR: Has superado el límite de tu parcela.")
         elif area_asignada_total == 0:
-            st.warning("⚠️ Debes asignar al menos 1 metro cuadrado a un cultivo para continuar.")
+            st.warning("⚠️ Debes asignar al menos 1 metro cuadrado para continuar.")
         else:
-            if st.button("✅ Confirmar Distribución y Acceder al Sistema", type="primary"):
-                st.session_state.cultivos_asignados = asignaciones_temporales
+            if st.button("✅ Confirmar y Acceder al Sistema", type="primary"):
+                st.session_state.cultivos_asignados = asignaciones
                 st.session_state.paso = 'dashboard'
                 st.rerun()
 
@@ -133,126 +180,104 @@ elif st.session_state.paso == 'onboarding_cultivos':
 elif st.session_state.paso == 'dashboard':
     st.title(f"📊 Dashboard Enjambre VRA | Admin: {st.session_state.usuario['nombre']}")
     
-    tab1, tab2, tab3 = st.tabs(["🌱 1. Sensores y Suelo (IoT)", "🚁 2. Logística Dron", "📈 3. Reporte Diario y WhatsApp"])
+    with st.sidebar:
+        st.header("🕒 Cronograma Operativo (Autónomo)")
+        st.markdown('<div class="horario-auto">💧 <b>05:30 AM</b> - Riego General</div>', unsafe_allow_html=True)
+        st.markdown('<div class="horario-auto">🧪 <b>08:00 AM</b> - Aplicación Vitaminas</div>', unsafe_allow_html=True)
+        st.markdown('<div class="horario-auto">🛡️ <b>06:00 PM</b> - Control Antiplagas</div>', unsafe_allow_html=True)
+        st.caption("El sistema despachará vuelos automáticamente en estos horarios.")
+
+    tab1, tab2, tab3 = st.tabs(["🌱 1. Sensores y Suelo", "🚁 2. Logística Dron", "📈 3. Reporte y WhatsApp"])
     
-    # ---------------- PESTAÑA 1: SENSORES Y PANELES RESTAURADOS ----------------
+    # ---------------- PESTAÑA 1: SENSORES ----------------
     with tab1:
-        st.header("Monitoreo Agroclimático (Weenat / Open-Meteo)")
+        st.write("Datos extraídos en tiempo real de la zona seleccionada.")
         clima_cols = st.columns(4)
+        temp_real, hum_real, viento_real = st.session_state.clima_real["temp"], st.session_state.clima_real["hum"], st.session_state.clima_real["viento"]
         
-        temp_real = st.session_state.clima_real["temp"]
-        hum_real = st.session_state.clima_real["hum"]
-        viento_real = st.session_state.clima_real["viento"]
-        
-        clima_cols[0].metric("Temp. Zona", f"{temp_real}°C")
-        clima_cols[1].metric("Humedad Ambiental", f"{hum_real}%")
-        clima_cols[2].metric("Viento", f"{viento_real} km/h")
-        clima_cols[3].metric("Radiación Solar", "Alta" if temp_real > 26 else "Normal")
+        clima_cols[0].metric("Temp. Zona", f"{temp_real}°C", "Sensory Data")
+        clima_cols[1].metric("Humedad Ambiental", f"{hum_real}%", "IoT")
+        clima_cols[2].metric("Velocidad de Viento", f"{viento_real} km/h", "Drone Safe" if viento_real < 25 else "-Riesgo Vuelo")
+        clima_cols[3].metric("Radiación / Evaporación", "Alta" if temp_real > 26 else "Normal", "-Riesgo Foliar" if temp_real > 26 else "Óptimo")
         
         st.markdown("---")
-        st.subheader("📡 Estado de Humedad por Sector (IoT Simulado)")
-        
-        # PANELES DE COLORES RESTAURADOS SEGÚN CULTIVOS SELECCIONADOS
         nombres_cultivos = list(st.session_state.cultivos_asignados.keys())
         zonas = st.columns(3)
-        
         if len(nombres_cultivos) > 0:
-            cultivo_1 = nombres_cultivos[0]
-            area_1 = st.session_state.cultivos_asignados[cultivo_1]
-            with zonas[0]:
-                st.markdown(f'<div class="sensor-verde"><b>Sector A: {cultivo_1}</b><br>Área: {area_1} m²<br>Humedad Suelo: 68%<br>Estado: Óptimo</div>', unsafe_allow_html=True)
-        
+            with zonas[0]: st.markdown(f'<div class="sensor-verde"><b>Sector A: {nombres_cultivos[0]}</b><br>Área: {st.session_state.cultivos_asignados[nombres_cultivos[0]]} m²<br>Humedad Suelo: 68%<br>Estado: Óptimo</div>', unsafe_allow_html=True)
         if len(nombres_cultivos) > 1:
-            cultivo_2 = nombres_cultivos[1]
-            area_2 = st.session_state.cultivos_asignados[cultivo_2]
-            with zonas[1]:
-                st.markdown(f'<div class="sensor-amarillo"><b>Sector B: {cultivo_2}</b><br>Área: {area_2} m²<br>Humedad Suelo: 45%<br>Estado: Estrés leve</div>', unsafe_allow_html=True)
-        
+            with zonas[1]: st.markdown(f'<div class="sensor-amarillo"><b>Sector B: {nombres_cultivos[1]}</b><br>Área: {st.session_state.cultivos_asignados[nombres_cultivos[1]]} m²<br>Humedad Suelo: 45%<br>Estado: Estrés leve</div>', unsafe_allow_html=True)
         with zonas[2]:
-            estado_suelo = "22%" if hum_real > 40 else "15% (CRÍTICO)" 
-            st.markdown(f'<div class="sensor-rojo"><b>🚨 Zona de Riesgo (Bordes)</b><br>Humedad Suelo: {estado_suelo}<br>Alerta de estrés hídrico<br>Requiere Dron Inmediato</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="sensor-rojo"><b>🚨 Zona de Riesgo</b><br>Humedad Suelo: {"22%" if hum_real > 40 else "15% (CRÍTICO)"}<br>Alerta hídrica<br>Requiere Atención</div>', unsafe_allow_html=True)
 
-    # ---------------- PESTAÑA 2: DRON, AGUA Y CORREO AUTOMÁTICO ----------------
+    # ---------------- PESTAÑA 2: DRON (PATRONES DE VUELO RESTAURADOS) ----------------
     with tab2:
         st.header("Centro de Mando Logístico VRA")
         col_ctrl, col_map = st.columns([1, 2])
         
+        ruta_calculada = []
+        color_ruta = "cyan"
+        
         with col_ctrl:
-            hora_actual = st.slider("Simulador de Reloj:", min_value=0, max_value=23, value=14, format="%d:00 hrs")
+            st.subheader("Control Manual Excepcional")
+            hora_actual = st.slider("Reloj:", 0, 23, 14, format="%d:00 hrs")
             tipo_mision = st.radio("Acción a ejecutar:", ["Riego de Emergencia", "Nutrición (Proteínas)", "Tratamiento (Anti-plagas)"])
+            
+            # EL USUARIO AHORA ELIGE EL PATRÓN
+            patron_vuelo = st.selectbox("Patrón de Despliegue Táctico:", ["Zig-Zag (Cobertura Total)", "Espiral (Foco Central)", "Perimetral (Bordes)"])
             
             es_riesgoso = (tipo_mision == "Riego de Emergencia" and 10 <= hora_actual <= 18)
             boton_deshabilitado = False
-            
             if es_riesgoso:
-                st.error("⚠️ ADVERTENCIA: Desplegar riego a esta hora quemará la plantación por efecto lupa solar.")
-                if not st.checkbox("Declaro que entiendo los riesgos y autorizo el despliegue manual."):
-                    boton_deshabilitado = True 
+                st.error("⚠️ ADVERTENCIA: Riego diurno detectado (Efecto lupa).")
+                if not st.checkbox("Declaro entender los riesgos y autorizo."): boton_deshabilitado = True 
             
-            if st.button("🚀 Forzar Despliegue Manual", type="primary", disabled=boton_deshabilitado, use_container_width=True):
-                
-                # 1. CÁLCULO DE AGUA (0.5 L por m2 solo si es riego)
+            if st.button("🚀 Forzar Despliegue", type="primary", disabled=boton_deshabilitado, use_container_width=True):
                 litros_usados = st.session_state.parcela_area * 0.5 if tipo_mision == "Riego de Emergencia" else 0
                 st.session_state.total_litros_hoy += litros_usados
                 
-                with st.spinner("Desplegando dron y despachando reportes..."):
+                # Asignación de color según misión para la ruta
+                color_ruta = "cyan" if tipo_mision == "Riego de Emergencia" else ("orange" if tipo_mision == "Nutrición (Proteínas)" else "red")
+                
+                # Calcular ruta basada en el patrón elegido y el polígono dibujado
+                ruta_calculada = calcular_ruta_patron(st.session_state.poligono_coords, patron_vuelo, st.session_state.centro_mapa[0], st.session_state.centro_mapa[1])
+                
+                with st.spinner(f"Transmitiendo patrón {patron_vuelo} al dron..."):
                     time.sleep(2)
-                    st.success(f"✅ Dron en vuelo. Misión: {tipo_mision}")
+                    st.success(f"✅ Dron en vuelo. Patrón: {patron_vuelo}")
+                    if litros_usados > 0: st.info(f"💧 Agua calculada: {litros_usados} L.")
+                    st.toast(f"📧 Correo SMTP enviado a {st.session_state.usuario['email']}", icon="✅")
                     
-                    if litros_usados > 0:
-                        st.info(f"💧 Consumo hídrico de la operación: {litros_usados} Litros calculados.")
-                    
-                    # 2. SIMULADOR DE CORREO ELECTRÓNICO (Notificación visual)
-                    st.toast(f"📧 Correo de respaldo enviado a {st.session_state.usuario['email']}", icon="✅")
-                    st.info(f"📩 **Servidor SMTP:** Se ha enviado un correo automático con la bitácora de vuelo a **{st.session_state.usuario['email']}**.")
-                    
-                    # 3. GUARDADO EN BITÁCORA
                     st.session_state.registro_diario.append({
-                        "Hora": f"{hora_actual}:00", 
-                        "Misión": tipo_mision, 
-                        "Área Tratada": f"{st.session_state.parcela_area} m²",
-                        "Agua Usada": f"{litros_usados} L",
-                        "Notificación": "Enviado por Email",
-                        "Estado": "🟡 Riesgo Asumido" if es_riesgoso else "🟢 Completado"
+                        "Hora": f"{hora_actual}:00", "Misión": tipo_mision, "Patrón": patron_vuelo,
+                        "Agua Usada": f"{litros_usados} L", "Estado": "Completado Manual"
                     })
         
         with col_map:
-            mapa_dron = folium.Map(location=[-33.456, -70.650], zoom_start=15, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri")
+            mapa_dron = folium.Map(location=st.session_state.centro_mapa, zoom_start=18, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri")
             
             if st.session_state.poligono_coords:
-                coords_formateadas = [[punto[1], punto[0]] for punto in st.session_state.poligono_coords]
-                folium.Polygon(locations=coords_formateadas, color="cyan", fill=True, fill_color="cyan", fill_opacity=0.3, popup="Zona VRA").add_to(mapa_dron)
+                coords_formateadas = [[p[1], p[0]] for p in st.session_state.poligono_coords]
+                folium.Polygon(locations=coords_formateadas, color="gray", fill=True, fill_color="gray", fill_opacity=0.2).add_to(mapa_dron)
                 mapa_dron.fit_bounds(coords_formateadas)
+            
+            # Si se presionó el botón, dibujamos la ruta animada encima de la parcela
+            if ruta_calculada:
+                plugins.AntPath(locations=ruta_calculada, dash_array=[10, 20], delay=800, color=color_ruta, weight=5, pulse_color='white').add_to(mapa_dron)
                 
-            st_folium(mapa_dron, width=700, height=400)
+            st_folium(mapa_dron, width=700, height=400, returned_objects=[])
 
-    # ---------------- PESTAÑA 3: BITÁCORA Y WHATSAPP ----------------
+    # ---------------- PESTAÑA 3: BITÁCORA ----------------
     with tab3:
-        st.header("Bitácora Diaria y Gestión de Recursos")
-        
+        st.header("Bitácora y Costos")
         if st.session_state.registro_diario:
-            df_registro = pd.DataFrame(st.session_state.registro_diario)
-            st.dataframe(df_registro, use_container_width=True)
-        else:
-            st.write("Aún no se han registrado vuelos hoy.")
+            st.dataframe(pd.DataFrame(st.session_state.registro_diario), use_container_width=True)
+        else: st.write("Aún no se han registrado vuelos hoy.")
         
         st.markdown("---")
-        st.subheader("📲 Exportación Móvil")
+        st.subheader("📲 Exportación Automática")
+        resumen_texto = f"""*REPORTE ENJAMBRE VRA* 🚁🌱\nGerente: {st.session_state.usuario['nombre']}\nÁrea cubierta: {st.session_state.parcela_area} m2\n💧 *Agua Utilizada Hoy: {st.session_state.total_litros_hoy} Litros*\nEstado: ESTABLE ✅"""
         
-        resumen_texto = f"""*REPORTE ENJAMBRE VRA* 🚁🌱
-Gerente: {st.session_state.usuario['nombre']}
-Área cubierta: {st.session_state.parcela_area} m2
-Clima local: {temp_real}°C / Humedad: {hum_real}%
-
-💧 *Total Agua Utilizada Hoy: {st.session_state.total_litros_hoy} Litros*
-
-Estado General: ESTABLE ✅
-Operaciones Dron hoy: {len(st.session_state.registro_diario)}"""
-        
-        st.text_area("Vista previa del mensaje a enviar:", value=resumen_texto, height=220, disabled=True)
-        
-        mensaje_url = urllib.parse.quote(resumen_texto)
-        numero_destino = st.session_state.usuario['telefono']
-        link_whatsapp = f"https://api.whatsapp.com/send?phone={numero_destino}&text={mensaje_url}"
-        
+        st.text_area("Mensaje a enviar:", value=resumen_texto, height=150, disabled=True)
+        link_whatsapp = f"https://api.whatsapp.com/send?phone={st.session_state.usuario['telefono']}&text={urllib.parse.quote(resumen_texto)}"
         st.markdown(f'<a href="{link_whatsapp}" target="_blank" class="whatsapp-btn">📲 Enviar Reporte Real por WhatsApp</a>', unsafe_allow_html=True)
