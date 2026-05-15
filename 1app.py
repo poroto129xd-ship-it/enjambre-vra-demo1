@@ -17,8 +17,6 @@ st.markdown("""
     .sensor-verde { background-color: #d4edda; color: #155724; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; text-align: center; margin-bottom: 10px;}
     .sensor-amarillo { background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border-left: 5px solid #ffc107; text-align: center; margin-bottom: 10px;}
     .sensor-rojo { background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border-left: 5px solid #dc3545; text-align: center; font-weight: bold; margin-bottom: 10px;}
-    .whatsapp-btn { background-color: #25D366; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; text-align: center; width: 100%;}
-    .whatsapp-btn:hover { background-color: #128C7E; color: white;}
     .horario-auto { background-color: #e2e3e5; color: #383d41; padding: 10px; border-radius: 5px; border-left: 5px solid #6c757d; margin-bottom: 5px;}
     </style>
 """, unsafe_allow_html=True)
@@ -255,7 +253,7 @@ elif st.session_state.paso == 'dashboard':
         with zonas_cols[2]:
             st.markdown(f'<div class="sensor-rojo"><b>🚨 Zona de Riesgo</b><br>Humedad Suelo: {"22%" if hum_real > 40 else "15% (CRÍTICO)"}<br>Alerta hídrica<br>Requiere Atención</div>', unsafe_allow_html=True)
 
-    # ---------------- PESTAÑA 2: DRON Y WHATSAPP DE ALERTA ----------------
+    # ---------------- PESTAÑA 2: DRON SILENCIOSO (SIN ALERTAS WHATSAPP AQUÍ) ----------------
     with tab2:
         st.header("Centro de Mando Logístico VRA")
         col_ctrl, col_map = st.columns([1, 2])
@@ -264,11 +262,11 @@ elif st.session_state.paso == 'dashboard':
         with col_ctrl:
             hora_actual = st.slider("Reloj:", 0, 23, 14, format="%d:00 hrs")
             tipo_mision = st.radio("Acción a ejecutar:", ["Riego de Emergencia", "Nutrición (Proteínas)", "Tratamiento (Anti-plagas)"])
-            zona_objetivo = st.selectbox("Sector Objetivo de Vuelo:", list(zonas_dict.keys()) if zonas_dict else ["Toda la Parcela"])
+            zona_objetivo = st.selectbox("Sector Objetivo de Vuelo (Focalizado):", list(zonas_dict.keys()) if zonas_dict else ["Toda la Parcela"])
             patron_vuelo = st.selectbox("Patrón de Despliegue Táctico:", ["Zig-Zag (Cobertura Total)", "Espiral (Foco Central)", "Perimetral (Bordes)"])
             
             es_riesgoso = (tipo_mision == "Riego de Emergencia" and 10 <= hora_actual <= 18)
-            boton_deshabilitado = es_riesgoso and not st.checkbox("Declaro entender los riesgos.") 
+            boton_deshabilitado = es_riesgoso and not st.checkbox("Declaro entender los riesgos y autorizo.") 
             
             if st.button("🚀 Forzar Despliegue Focalizado", type="primary", disabled=boton_deshabilitado, use_container_width=True):
                 area_vuelo = st.session_state.parcela_area if zona_objetivo == "Toda la Parcela" else st.session_state.parcela_area / 3
@@ -280,31 +278,14 @@ elif st.session_state.paso == 'dashboard':
                 
                 with st.spinner(f"Calculando trayectoria para {zona_objetivo}..."):
                     time.sleep(2)
-                    st.success(f"✅ Dron en vuelo. Objetivo: {zona_objetivo}")
+                    st.success(f"✅ Dron en vuelo silencioso. Objetivo: {zona_objetivo}")
                     if litros_usados > 0: st.info(f"💧 Agua calculada: {litros_usados} L. (Ahorro validado)")
                     
-                    st.session_state.registro_diario.append({"Hora": f"{hora_actual}:00", "Misión": tipo_mision, "Objetivo": zona_objetivo, "Agua Usada": f"{litros_usados} L", "Estado": "Completado"})
-
-                    # MENSAJE PROFESIONAL DE TWILIO PARA ALERTA DE VUELO
-                    msj_vuelo_profesional = f"""*🚨 ALERTA DE DESPLIEGUE - ENJAMBRE VRA* 🚁
------------------------------------
-*Gerente:* {st.session_state.usuario.get('nombre', '')}
-
-Se ha autorizado y ejecutado una operación de vuelo VRA.
-
-*🎯 Detalles de la Misión:*
-• Acción: {tipo_mision}
-• Objetivo Focalizado: {zona_objetivo}
-• Patrón de Vuelo: {patron_vuelo}
-• Hora de Despliegue: {hora_actual}:00 hrs
-
-*💧 Optimización de Recursos:*
-• Consumo Hídrico Estimado: {litros_usados} Litros
-
-_Trazabilidad de vuelo registrada exitosamente._"""
-                    
-                    exito, _ = enviar_whatsapp_twilio(msj_vuelo_profesional, st.session_state.usuario.get('telefono', ''))
-                    if exito: st.toast("📲 Alerta enviada por WhatsApp (Twilio)", icon="✅")
+                    # Agregamos a la bitácora de forma silenciosa
+                    st.session_state.registro_diario.append({
+                        "Hora": f"{hora_actual}:00", "Misión": tipo_mision, "Objetivo": zona_objetivo,
+                        "Agua Usada": f"{litros_usados} L", "Estado": "Completado"
+                    })
         
         with col_map:
             st.markdown("**Monitor de Vuelo: Tratamiento Focalizado (Spot Spraying)**")
@@ -319,7 +300,7 @@ _Trazabilidad de vuelo registrada exitosamente._"""
                 plugins.AntPath(locations=ruta_calculada, dash_array=[10, 20], delay=800, color=color_ruta, weight=5, pulse_color='white').add_to(mapa_dron)
             st_folium(mapa_dron, width=700, height=400, returned_objects=[])
 
-    # ---------------- PESTAÑA 3: BITÁCORA Y REPORTE EJECUTIVO WHATSAPP ----------------
+    # ---------------- PESTAÑA 3: BITÁCORA Y REPORTE EJECUTIVO (SOLO TWILIO) ----------------
     with tab3:
         st.header("Bitácora de Monitoreo")
         if st.session_state.registro_diario:
@@ -328,12 +309,17 @@ _Trazabilidad de vuelo registrada exitosamente._"""
             
         st.markdown("---")
         st.subheader("📲 Exportación de Reporte Oficial")
-        st.write("Envíe el resumen gerencial directamente vía Twilio-WhatsApp.")
+        st.write("Envíe el resumen gerencial directamente a WhatsApp vía Twilio API.")
         
-        # MENSAJE PROFESIONAL DE REPORTE DIARIO (Inspirado en tu plantilla HTML)
+        # CÁLCULOS ESTADÍSTICOS DE LA BITÁCORA
+        vuelos_riego = sum(1 for r in st.session_state.registro_diario if r["Misión"] == "Riego de Emergencia")
+        vuelos_nutricion = sum(1 for r in st.session_state.registro_diario if r["Misión"] == "Nutrición (Proteínas)")
+        vuelos_plagas = sum(1 for r in st.session_state.registro_diario if r["Misión"] == "Tratamiento (Anti-plagas)")
+        
         cultivos_str = ', '.join(st.session_state.cultivos_asignados.keys()) if st.session_state.cultivos_asignados else 'Ninguno'
         alerta_zona = "Requiere Atención" if hum_real > 40 else "CRÍTICO - Alerta Hídrica"
         
+        # EL REPORTE CON LOS CONTADORES
         resumen_texto_profesional = f"""*📋 REPORTE EJECUTIVO - ENJAMBRE VRA* 🚁🌱
 -----------------------------------
 *👤 Gerente Agrícola:* {st.session_state.usuario.get('nombre', '')}
@@ -348,21 +334,22 @@ _Trazabilidad de vuelo registrada exitosamente._"""
 🟡 Zona Media: Estrés Leve
 🔴 Zona Crítica: {alerta_zona}
 
-*🚀 OPERACIONES Y RECURSOS*
-💧 Consumo Hídrico Hoy: {st.session_state.total_litros_hoy} Litros
-🚁 Vuelos Realizados: {len(st.session_state.registro_diario)}
+*🚀 OPERACIONES REALIZADAS HOY*
+🚁 Total Vuelos Desplegados: {len(st.session_state.registro_diario)}
+  • 💧 Riegos de Emergencia: {vuelos_riego}
+  • 💊 Nutrición (Proteínas): {vuelos_nutricion}
+  • 🛡️ Tratamiento (Antiplagas): {vuelos_plagas}
+
+*📊 OPTIMIZACIÓN DE RECURSOS*
+💧 Consumo Hídrico Total: {st.session_state.total_litros_hoy} Litros
 
 _Generado automáticamente por Enjambre VRA._"""
         
-        st.text_area("Previsualización del Mensaje:", value=resumen_texto_profesional, height=350, disabled=True)
+        st.text_area("Previsualización del Mensaje:", value=resumen_texto_profesional, height=450, disabled=True)
         
-        col_w1, col_w2 = st.columns(2)
-        with col_w1:
-            if st.button("🚀 Enviar Reporte (API Twilio)", type="primary", use_container_width=True):
-                with st.spinner("Conectando con servidores de Twilio..."):
-                    exito, msj = enviar_whatsapp_twilio(resumen_texto_profesional, st.session_state.usuario.get('telefono', ''))
-                    if exito: st.success("✅ Mensaje enviado con éxito a tu celular.")
-                    else: st.error(f"❌ Falló el envío: {msj}")
-        with col_w2:
-            link_whatsapp = f"https://api.whatsapp.com/send?phone={st.session_state.usuario.get('telefono', '')}&text={urllib.parse.quote(resumen_texto_profesional)}"
-            st.markdown(f'<a href="{link_whatsapp}" target="_blank" class="whatsapp-btn">Apertura Manual en WhatsApp Web</a>', unsafe_allow_html=True)
+        # BOTÓN ÚNICO DE TWILIO (Eliminada la opción manual)
+        if st.button("🚀 Enviar Reporte Oficial por Twilio", type="primary", use_container_width=True):
+            with st.spinner("Conectando con servidores de Twilio..."):
+                exito, msj = enviar_whatsapp_twilio(resumen_texto_profesional, st.session_state.usuario.get('telefono', ''))
+                if exito: st.success("✅ Mensaje enviado con éxito a tu celular vía API.")
+                else: st.error(f"❌ Falló el envío. Revisa tus Secrets: {msj}")
