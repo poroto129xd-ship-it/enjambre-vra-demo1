@@ -24,11 +24,12 @@ def cargar_imagen_base64(ruta_imagen):
     except FileNotFoundError:
         return None
 
-# --- 🚀 HACK DE JAVASCRIPT: CURSOR DE HORMIGA ESTÁTICO (CSS PURO BLINDADO) ---
+# --- 🚀 SOLUCIÓN 1: CURSOR DE HORMIGA ESTÁTICO SEGURO (URL-ENCODED) ---
 st.markdown("""
     <style>
+    /* Cursor de hormiga integrado directamente sin scripts para evitar fugas de texto */
     body, .stApp, [data-testid="stAppViewContainer"], * {
-        cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'><text y='24' font-size='24'>🐜</text></svg>") 16 16, auto !important;
+        cursor: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Ctext y='24' font-size='24'%3E🐜%3C/text%3E%3C/svg%3E") 16 16, auto !important;
     }
     
     .sensor-verde { background-color: #d4edda; color: #155724; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; text-align: center; margin-bottom: 10px;}
@@ -38,25 +39,60 @@ st.markdown("""
     .whatsapp-btn { background-color: #25D366; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; text-align: center; width: 100%;}
     .whatsapp-btn:hover { background-color: #128C7E; color: white;}
     .ai-card { background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(34, 197, 94, 0.3); backdrop-filter: blur(10px); margin-bottom: 15px;}
+    
+    /* 🚀 SOLUCIÓN 2: Diseño de los mensajes del chat para que sean legibles y no se pierdan */
+    [data-testid="stChatMessage"] { background: rgba(0, 20, 10, 0.85); border-radius: 10px; border: 1px solid rgba(34, 197, 94, 0.4); padding: 15px; margin-bottom: 10px; }
     </style>
 """, unsafe_allow_html=True)
 
 # --- DISEÑO VISUAL: FONDO AGRÍCOLA ANIMADO ---
 fondo_base64 = cargar_imagen_base64("assets/fondo_campo.jpg")
+
 if fondo_base64:
-    fondo_css = f'background-image: linear-gradient(rgba(0, 25, 10, 0.72), rgba(0, 40, 18, 0.84)), url("data:image/jpg;base64,{fondo_base64}"); background-size: 115%; background-position: center; background-attachment: fixed; animation: moverFondoCampo 28s ease-in-out infinite alternate;'
+    fondo_css = f"""
+    background-image:
+        linear-gradient(rgba(0, 25, 10, 0.72), rgba(0, 40, 18, 0.84)),
+        url("data:image/jpg;base64,{fondo_base64}");
+    background-size: 115%;
+    background-position: center;
+    background-attachment: fixed;
+    animation: moverFondoCampo 28s ease-in-out infinite alternate;
+    """
 else:
-    fondo_css = 'background: linear-gradient(135deg, #052e16 0%, #064e3b 45%, #022c22 100%);'
+    fondo_css = """
+    background:
+        radial-gradient(circle at top left, rgba(34,197,94,0.35), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(132,204,22,0.25), transparent 35%),
+        linear-gradient(135deg, #052e16 0%, #064e3b 45%, #022c22 100%);
+    """
 
 st.markdown(f"""
 <style>
-#MainMenu {{ visibility: hidden; }} footer {{ visibility: hidden; }} header {{ background: transparent !important; }}
+#MainMenu {{ visibility: hidden; }}
+footer {{ visibility: hidden; }}
+header {{ background: transparent !important; }}
 .stApp {{ {fondo_css} color: white; }}
-@keyframes moverFondoCampo {{ 0% {{ background-position: center center; }} 50% {{ background-position: center top; }} 100% {{ background-position: center bottom; }} }}
-.stApp::before {{ content: ""; position: fixed; top: 0; left: 0; width: 200%; height: 200%; pointer-events: none; z-index: 0; background-image: radial-gradient(circle, rgba(134, 239, 172, 0.1) 2px, transparent 3px); background-size: 150px 150px; animation: particulas 40s linear infinite; }}
-@keyframes particulas {{ 0% {{ transform: translate(0, 0); }} 100% {{ transform: translate(-200px, -200px); }} }}
-.block-container {{ position: relative; z-index: 2; padding-top: 2rem; padding-bottom: 2rem;}}
-[data-testid="stForm"] {{ background: rgba(0, 45, 20, 0.58); border-radius: 24px; border: 1px solid rgba(187, 247, 208, 0.2); backdrop-filter: blur(14px); }}
+@keyframes moverFondoCampo {{
+    0% {{ background-position: center center; background-size: 115%; }}
+    50% {{ background-position: center top; background-size: 122%; }}
+    100% {{ background-position: center bottom; background-size: 118%; }}
+}}
+.stApp::before {{
+    content: ""; position: fixed; top: 0; left: 0; width: 200%; height: 200%;
+    pointer-events: none; z-index: 0;
+    background-image:
+        radial-gradient(circle, rgba(134, 239, 172, 0.1) 2px, transparent 3px),
+        radial-gradient(circle, rgba(187, 247, 208, 0.14) 1px, transparent 3px),
+        radial-gradient(circle, rgba(34, 197, 94, 0.12) 2px, transparent 4px);
+    background-size: 120px 120px, 180px 180px, 250px 250px;
+    animation: particulasCampo 35s linear infinite;
+}}
+@keyframes particulasCampo {{
+    0% {{ transform: translate(0, 0); }}
+    100% {{ transform: translate(-250px, -350px); }}
+}}
+.block-container {{ position: relative; z-index: 2; padding-top: 2rem; padding-bottom: 2rem; }}
+[data-testid="stForm"] {{ background: rgba(0, 45, 20, 0.58); padding: 28px; border-radius: 24px; border: 1px solid rgba(187, 247, 208, 0.28); backdrop-filter: blur(14px); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.38); }}
 [data-testid="stMetric"] {{ background: rgba(0, 45, 20, 0.42); padding: 18px; border-radius: 18px; border: 1px solid rgba(187, 247, 208, 0.20); box-shadow: 0 12px 35px rgba(0, 0, 0, 0.24); }}
 button[data-baseweb="tab"] {{ background: rgba(0, 45, 20, 0.42); border-radius: 14px; color: white; margin-right: 8px; border: 1px solid rgba(187, 247, 208, 0.18); }}
 button[data-baseweb="tab"]:hover {{ background: rgba(34, 197, 94, 0.25); }}
@@ -70,7 +106,21 @@ section[data-testid="stSidebar"] {{ background: rgba(2, 44, 34, 0.94); border-ri
 """, unsafe_allow_html=True)
 
 # --- HOJAS ANIMADAS ---
-st.markdown('<div style="position:fixed; inset:0; pointer-events:none; z-index:1; overflow:hidden;"><div class="hoja" style="position:absolute; top:-10%; left:5%; animation: caerHojas 16s linear infinite;">🌿</div><div class="hoja" style="position:absolute; top:-10%; left:25%; animation: caerHojas 18s linear infinite;">🍃</div><div class="hoja" style="position:absolute; top:-10%; left:50%; animation: caerHojas 14s linear infinite;">🌱</div><div class="hoja" style="position:absolute; top:-10%; left:75%; animation: caerHojas 20s linear infinite;">🌿</div></div><style>@keyframes caerHojas { 0% { transform: translateY(-10vh) rotate(0deg); } 100% { transform: translateY(120vh) rotate(360deg); } }</style>', unsafe_allow_html=True)
+st.markdown("""
+<style>
+.hojas-animadas { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+.hoja { position: absolute; top: -10%; font-size: 24px; opacity: 0.45; animation: caerHojas 16s linear infinite; }
+.hoja:nth-child(1) { left: 5%; animation-delay: 0s; }
+.hoja:nth-child(2) { left: 18%; animation-delay: 3s; }
+.hoja:nth-child(3) { left: 33%; animation-delay: 6s; }
+.hoja:nth-child(4) { left: 50%; animation-delay: 1s; }
+.hoja:nth-child(5) { left: 66%; animation-delay: 4s; }
+.hoja:nth-child(6) { left: 82%; animation-delay: 8s; }
+.hoja:nth-child(7) { left: 92%; animation-delay: 11s; }
+@keyframes caerHojas { 0% { transform: translateY(-10vh) translateX(0) rotate(0deg); } 50% { transform: translateY(55vh) translateX(35px) rotate(180deg); } 100% { transform: translateY(120vh) translateX(-25px) rotate(360deg); } }
+</style>
+<div class="hojas-animadas"><div class="hoja">🌿</div><div class="hoja">🍃</div><div class="hoja">🌱</div><div class="hoja">🍃</div><div class="hoja">🌿</div><div class="hoja">🌱</div><div class="hoja">🍃</div></div>
+""", unsafe_allow_html=True)
 
 # --- 🚀 BASE DE DATOS PLAS (CHILE) ---
 DB_CULTIVOS_PLAS = {
@@ -104,7 +154,7 @@ if 'mostrar_animacion_dron' not in st.session_state: st.session_state.mostrar_an
 # 🚀 NUEVA MEMORIA: HISTORIAL DE CHAT IA
 if 'chat_history' not in st.session_state: 
     st.session_state.chat_history = [
-        {"role": "assistant", "content": "👋 ¡Hola! Soy **Agri-Brain**, el núcleo analítico de Enjambre VRA. Conozco cada metro cuadrado de tu campo, el clima actual y la bitácora de vuelo de los drones. ¿En qué te puedo ayudar hoy? \n\n*(Ej: 'Dime el resumen', '¿Cuánto hemos ahorrado?', 'Predicción de cosecha')*"}
+        {"role": "assistant", "content": "👋 ¡Hola! Soy **Agri-Brain**, el núcleo analítico de Enjambre VRA. Conozco cada metro cuadrado de tu campo, el clima actual y la bitácora de vuelo de los drones.\n\n Puedes preguntarme cosas como:\n- *¿Cuánto espacio libre me queda?*\n- *¿Cuánto hemos ahorrado en agua?*\n- *¿Qué pasará con la temperatura mañana?*\n- *¿Cómo van mis ganancias (ROI)?*"}
     ]
 
 # --- 🚀 CLASE PARA ANIMAR EL DRON EN EL MAPA ---
@@ -194,7 +244,9 @@ def calcular_ruta_patron(coords_zona, patron, lat_base, lon_base):
     if not coords_zona: return []
     c_lat, c_lon = sum(p[0] for p in coords_zona)/len(coords_zona), sum(p[1] for p in coords_zona)/len(coords_zona)
     ruta = [[lat_base, lon_base], [c_lat, c_lon]]
-    if patron == "Perimetral (Bordes)": ruta.extend(coords_zona); ruta.append(coords_zona[0])
+    if patron == "Perimetral (Bordes)":
+        ruta.extend(coords_zona)
+        ruta.append(coords_zona[0])
     elif patron == "Zig-Zag (Cobertura Total)":
         lats = [p[0] for p in coords_zona]; max_lat, min_lat = max(lats), min(lats); paso_lat = (max_lat - min_lat) / 6 
         poly = coords_zona + [coords_zona[0]]
@@ -271,39 +323,68 @@ elif st.session_state.paso == 'onboarding_mapa':
 elif st.session_state.paso == 'onboarding_cultivos':
     st.header("🌾 Fase PLAS: Mapeo de Sectores Productivos")
     st.write(f"Área Disponible: **{st.session_state.parcela_area:,} m²**")
+    
     col_ctrl, col_map = st.columns([1, 2])
+    
     with col_ctrl:
         st.subheader("1. Seleccionar Tipo de Planta")
         tipo_cultivo = st.selectbox("Base de Datos PLAS (Chile):", list(DB_CULTIVOS_PLAS.keys()))
         req_h = DB_CULTIVOS_PLAS[tipo_cultivo]['agua_m2']
         color_c = DB_CULTIVOS_PLAS[tipo_cultivo]['color']
+        
         st.info(f"Requerimiento PLAS: **{req_h} L/m²**")
+        st.write("2. Dibuje el sector de este cultivo en el mapa.")
+        
         if st.button("💾 GUARDAR SECTOR MAPEADO", use_container_width=True):
             if 'temp_coords' in st.session_state and st.session_state.temp_coords:
                 area_real = calcular_area_interseccion(st.session_state.temp_coords, st.session_state.poligono_coords)
                 if area_real > 0:
-                    st.session_state.cultivos_mapeados[f"{tipo_cultivo}_{time.time()}"] = {'nombre': tipo_cultivo, 'coords': [[p[1], p[0]] for p in st.session_state.temp_coords], 'area': area_real, 'agua': area_real * req_h, 'color': color_c}
-                    st.success(f"Sector de {tipo_cultivo} guardado ({area_real:,.0f} m² internos).")
+                    st.session_state.cultivos_mapeados[f"{tipo_cultivo}_{time.time()}"] = {
+                        'nombre': tipo_cultivo,
+                        'coords': [[p[1], p[0]] for p in st.session_state.temp_coords],
+                        'area': area_real,
+                        'agua': area_real * req_h,
+                        'color': color_c
+                    }
+                    if area_real < (calcular_area_poligono(st.session_state.temp_coords) * 0.98):
+                        st.warning(f"⚠️ Ajustado al límite del predio: {area_real:,.0f} m² internos.")
+                    else:
+                        st.success(f"Sector de {tipo_cultivo} guardado ({area_real:,.0f} m²).")
                     st.rerun()
                 else: st.error("Dibuja dentro del terreno.")
+            else: st.warning("Por favor, dibuje el polígono del sector antes de guardar.")
+
+        st.markdown("---")
         st.subheader("Sectores Registrados:")
-        for k, v in st.session_state.cultivos_mapeados.items(): st.write(f"• **{v['nombre']}**: {v['area']:,.0f} m²")
+        for k, v in st.session_state.cultivos_mapeados.items():
+            st.write(f"• **{v['nombre']}**: {v['area']:,.0f} m²")
+        
         if st.session_state.cultivos_mapeados:
-            if st.button("✅ FINALIZAR E IR AL DASHBOARD", type="primary", use_container_width=True):
+            if st.button("✅ FINALIZAR MAPEADO E IR AL DASHBOARD", type="primary", use_container_width=True):
                 st.session_state.paso = 'dashboard'; st.rerun()
+
     with col_map:
+        st.markdown("**Interactúe con el mapa para delimitar los sectores:**")
         m_plas = folium.Map(location=st.session_state.centro_mapa, zoom_start=16, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri")
-        if st.session_state.poligono_coords: folium.Polygon(locations=[[p[1], p[0]] for p in st.session_state.poligono_coords], color="white", weight=2, fill=False).add_to(m_plas)
-        for k, v in st.session_state.cultivos_mapeados.items(): folium.Polygon(locations=v['coords'], color=v['color'], fill=True, fill_opacity=0.6).add_to(m_plas)
-        plugins.Draw(export=True, draw_options={'polyline':False, 'circle':False, 'marker':False, 'circlemarker':False}).add_to(m_plas)
+        
+        if st.session_state.poligono_coords:
+            folium.Polygon(locations=[[p[1], p[0]] for p in st.session_state.poligono_coords], color="white", weight=2, dash_array='5, 5', fill=False).add_to(m_plas)
+        
+        for k, v in st.session_state.cultivos_mapeados.items():
+            folium.Polygon(locations=v['coords'], color=v['color'], fill=True, fill_opacity=0.6, tooltip=v['nombre']).add_to(m_plas)
+
+        draw_plas = plugins.Draw(export=True, draw_options={'polyline':False, 'circle':False, 'marker':False, 'circlemarker':False}).add_to(m_plas)
         m_res = st_folium(m_plas, height=550, use_container_width=True, key="mapeador_plas")
-        if m_res and m_res.get("all_drawings"): st.session_state.temp_coords = m_res["all_drawings"][-1]["geometry"]["coordinates"][0]
+        
+        if m_res and m_res.get("all_drawings"):
+            st.session_state.temp_coords = m_res["all_drawings"][-1]["geometry"]["coordinates"][0]
 
 # ==========================================
-# FASE 4: DASHBOARD PRINCIPAL Y CONSULTOR IA
+# FASE 4: DASHBOARD PRINCIPAL
 # ==========================================
 elif st.session_state.paso == 'dashboard':
     st.title(f"📊 Dashboard Enjambre VRA | Admin: {st.session_state.usuario.get('nombre', '')}")
+    
     pts_t = [[p[1], p[0]] for p in st.session_state.poligono_coords[:-1]]
     n_pts = len(pts_t); c = st.session_state.centro_mapa; t1, t2 = n_pts//3, 2*(n_pts//3)
     zonas_v = {"Toda la Parcela": pts_t, "Zona Óptima": [c]+pts_t[0:t1+1]+[c], "Zona Media": [c]+pts_t[t1:t2+1]+[c], "Zona Crítica": [c]+pts_t[t2:]+[pts_t[0], c]}
@@ -313,71 +394,160 @@ elif st.session_state.paso == 'dashboard':
         st.markdown('<div class="horario-auto">💧 <b>05:30 AM</b> - Riego General</div>', unsafe_allow_html=True)
         st.markdown('<div class="horario-auto">🧪 <b>08:00 AM</b> - Aplicación Vitaminas</div>', unsafe_allow_html=True)
         st.markdown('<div class="horario-auto">🛡️ <b>06:00 PM</b> - Control Antiplagas</div>', unsafe_allow_html=True)
+        
         st.markdown("---")
         st.header("📊 Balance de Superficie")
+        area_t = st.session_state.parcela_area
         area_u = sum(v['area'] for v in st.session_state.cultivos_mapeados.values())
-        st.write(f"**📍 Total:** {st.session_state.parcela_area:,.0f} m²"); st.write(f"**✅ Usado:** {area_u:,.0f} m²")
-        for k, v in st.session_state.cultivos_mapeados.items(): st.markdown(f"<div style='padding-left: 20px; font-size: 14px;'>🌱 {v['nombre']}: {v['area']:,.0f} m²</div>", unsafe_allow_html=True)
-        st.write(f"**⬜ Área Libre:** {max(0, st.session_state.parcela_area - area_u):,.0f} m²")
-        st.progress(min(area_u / st.session_state.parcela_area, 1.0) if st.session_state.parcela_area > 0 else 0.0)
+        area_l = max(0, area_t - area_u)
+        
+        st.write(f"**📍 Área Total:** {area_t:,.0f} m²")
+        st.write(f"**✅ Área Usada:** {area_u:,.0f} m²")
+        for k, v in st.session_state.cultivos_mapeados.items():
+            st.markdown(f"<div style='padding-left: 20px; font-size: 14px;'>🌱 {v['nombre']}: {v['area']:,.0f} m²</div>", unsafe_allow_html=True)
+        st.write(f"**⬜ Área Libre:** {area_l:,.0f} m²")
+        st.progress(min(area_u / area_t, 1.0) if area_t > 0 else 0.0)
 
-    # 🚀 NUEVA PESTAÑA AGREGADA: 🤖 Consultor IA
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["🌱 Sensores", "🚁 Logística Dron", "📈 Reporte Maestro", "📉 Gemelo Digital (IA)", "🤖 Consultor IA"])
     
     with tab1:
         tr, hr, vr = st.session_state.clima_real["temp"], st.session_state.clima_real["hum"], st.session_state.clima_real["viento"]
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Temperatura", f"{tr}°C"); c2.metric("Humedad", f"{hr}%"); c3.metric("Viento", f"{vr} km/h"); c4.metric("Radiación", "Normal")
+        st.markdown("---")
+        
         list_m = list(st.session_state.cultivos_mapeados.values())
-        if list_m:
-            cols = st.columns(len(list_m)+1)
-            for i, s in enumerate(list_m):
-                with cols[i]: st.markdown(f'<div class="sensor-verde"><b>{s["nombre"]}</b><br>{s["area"]:,.0f} m²</div>', unsafe_allow_html=True)
-            with cols[-1]: st.markdown('<div class="sensor-rojo"><b>🚨 Riesgo</b><br>15% Hum</div>', unsafe_allow_html=True)
+        if len(list_m) > 0:
+            num_cols = len(list_m) + 1 
+            cols_s = st.columns(num_cols)
+            for i, sector in enumerate(list_m):
+                clase_css = "sensor-verde" if i % 2 == 0 else "sensor-amarillo"
+                humedad_sim = "68%" if i % 2 == 0 else "45%"
+                with cols_s[i]: st.markdown(f'<div class="{clase_css}"><b>{sector["nombre"]}</b><br>{sector["area"]:,.0f} m²<br>Humedad: {humedad_sim}</div>', unsafe_allow_html=True)
+            with cols_s[-1]: st.markdown('<div class="sensor-rojo"><b>🚨 Riesgo Global</b><br>Humedad: 15%</div>', unsafe_allow_html=True)
+        else:
+            cols_s = st.columns(3)
+            with cols_s[0]: st.markdown('<div class="sensor-verde"><b>Sector A: No asignado</b><br>0 m²</div>', unsafe_allow_html=True)
+            with cols_s[1]: st.markdown('<div class="sensor-amarillo"><b>Sector B: No asignado</b><br>0 m²</div>', unsafe_allow_html=True)
+            with cols_s[2]: st.markdown('<div class="sensor-rojo"><b>🚨 Riesgo Global</b><br>Humedad: 15%</div>', unsafe_allow_html=True)
 
     with tab2:
         st.header("Centro de Mando Logístico")
         col_c, col_m = st.columns([1, 2])
+        
         with col_c:
-            hora = st.slider("Reloj:", 0, 23, 14); tipo = st.radio("Misión:", ["Riego de Emergencia", "Nutrición (Proteínas)", "Tratamiento (Anti-plagas)"])
-            zona = st.selectbox("Objetivo:", list(zonas_v.keys())); patron = st.selectbox("Patrón:", ["Zig-Zag (Cobertura Total)", "Perimetral (Bordes)"])
-            if st.button("🚀 DESPLEGAR DRON", type="primary", use_container_width=True):
+            hora_actual = st.slider("Reloj (Simulador):", 0, 23, 14, format="%d:00 hrs")
+            tipo_m = st.radio("Misión:", ["Riego de Emergencia", "Nutrición (Proteínas)", "Tratamiento (Anti-plagas)"])
+            zona_o = st.selectbox("Objetivo:", list(zonas_v.keys()))
+            patron_vuelo = st.selectbox("Patrón de Despliegue Táctico:", ["Zig-Zag (Cobertura Total)", "Perimetral (Bordes)"])
+            
+            es_riesgoso = (tipo_m == "Riego de Emergencia" and 10 <= hora_actual <= 18)
+            boton_deshabilitado = es_riesgoso and not st.checkbox("Declaro entender los riesgos térmicos.")
+            
+            if st.button("🚀 DESPLEGAR DRON", type="primary", disabled=boton_deshabilitado, use_container_width=True):
                 agua_base = sum(v['agua'] for v in st.session_state.cultivos_mapeados.values())
-                f = 1.0 if zona == "Toda la Parcela" else 0.33
-                if tipo == "Riego de Emergencia":
-                    st.session_state.total_litros_tradicional += (agua_base * 1.15 * f)
-                    l_vra = (agua_base * 0.12 * f); st.session_state.total_litros_hoy += l_vra
-                else: l_vra = 0
-                st.session_state.color_dron_actual = "cyan" if tipo == "Riego de Emergencia" else "orange"
-                st.session_state.ruta_dron_actual = calcular_ruta_patron(zonas_v[zona], patron, c[0], c[1])
+                factor_zona = 1.0 if zona_o == "Toda la Parcela" else 0.333
+                
+                if tipo_m == "Riego de Emergencia":
+                    litros_trad = agua_base * 1.15 * factor_zona 
+                    litros_vr = agua_base * 0.12 * factor_zona   
+                elif tipo_m == "Nutrición (Proteínas)":
+                    litros_trad = (agua_base * 0.20) * factor_zona 
+                    litros_vr = (agua_base * 0.20) * 0.10 * factor_zona 
+                else: 
+                    litros_trad = (agua_base * 0.15) * factor_zona
+                    litros_vr = (agua_base * 0.15) * 0.08 * factor_zona
+
+                st.session_state.total_litros_tradicional += round(litros_trad, 1)
+                st.session_state.total_litros_hoy += round(litros_vr, 1)
+                
+                st.session_state.color_dron_actual = "cyan" if tipo_m == "Riego de Emergencia" else ("orange" if tipo_m == "Nutrición (Proteínas)" else "red")
+                st.session_state.ruta_dron_actual = calcular_ruta_patron(zonas_v[zona_o], patron_vuelo, c[0], c[1])
                 st.session_state.mostrar_animacion_dron = True
-                with st.spinner(f"🚁 Desplegando Enjambre VRA sobre {zona}..."): time.sleep(10)
-                st.session_state.registro_diario.append({"Hora": f"{hora}:00", "Misión": tipo, "Zona": zona, "Agua": f"{round(l_vra,1)} L"})
-                st.rerun()
+                
+                with st.spinner(f"🛰️ Conectando telemetría VRA. Trazando ruta hacia {zona_o}..."):
+                    time.sleep(1.5)
+                
+                st.session_state.registro_diario.append({"Hora": f"{hora_actual}:00", "Misión": tipo_m, "Zona": zona_o, "Agua": f"{round(litros_vr, 1)} L"})
+                st.rerun() 
+                
         with col_m:
             map_d = folium.Map(location=c, zoom_start=16, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri")
-            for s in st.session_state.cultivos_mapeados.values(): folium.Polygon(locations=s['coords'], color=s['color'], fill=True, fill_opacity=0.2).add_to(map_d)
+            
+            for s in st.session_state.cultivos_mapeados.values():
+                folium.Polygon(locations=s['coords'], color=s['color'], weight=1, fill=True, fill_opacity=0.2, tooltip=f"Cultivo: {s['nombre']}").add_to(map_d)
+            
             if "Zona Óptima" in zonas_v and len(zonas_v["Zona Óptima"]) > 2:
-                folium.Polygon(locations=zonas_v["Zona Óptima"], color="#28a745", weight=2, fill=True, fill_color="#28a745", fill_opacity=0.45).add_to(map_d)
-                folium.Polygon(locations=zonas_v["Zona Media"], color="#ffc107", weight=2, fill=True, fill_color="#ffc107", fill_opacity=0.45).add_to(map_d)
-                folium.Polygon(locations=zonas_v["Zona Crítica"], color="#dc3545", weight=2, fill=True, fill_color="#dc3545", fill_opacity=0.55).add_to(map_d)
+                folium.Polygon(locations=zonas_v["Zona Óptima"], color="#28a745", weight=2, fill=True, fill_color="#28a745", fill_opacity=0.45, tooltip="Zona Óptima (>60% Humedad)").add_to(map_d)
+                folium.Polygon(locations=zonas_v["Zona Media"], color="#ffc107", weight=2, fill=True, fill_color="#ffc107", fill_opacity=0.45, tooltip="Zona Media (40-60% Humedad)").add_to(map_d)
+                folium.Polygon(locations=zonas_v["Zona Crítica"], color="#dc3545", weight=2, fill=True, fill_color="#dc3545", fill_opacity=0.55, tooltip="Zona Crítica (<30% Humedad)").add_to(map_d)
+
             if st.session_state.ruta_dron_actual: 
-                plugins.AntPath(locations=st.session_state.ruta_dron_actual, color=st.session_state.color_dron_actual, weight=5).add_to(map_d)
-                if st.session_state.get('mostrar_animacion_dron'): map_d.get_root().add_child(MoveDrone(st.session_state.ruta_dron_actual)); st.session_state.mostrar_animacion_dron = False
+                plugins.AntPath(locations=st.session_state.ruta_dron_actual, color=st.session_state.color_dron_actual, weight=5, dash_array=[10, 20], delay=800, pulse_color='white').add_to(map_d)
+                
+                if st.session_state.get('mostrar_animacion_dron', False):
+                    map_d.get_root().add_child(MoveDrone(st.session_state.ruta_dron_actual))
+                    st.session_state.mostrar_animacion_dron = False
+            
             st_folium(map_d, height=450, use_container_width=True)
 
     with tab3:
-        st.header("Reporte Ejecutivo & ROI")
+        st.header("Reporte Ejecutivo Twilio")
         st.dataframe(pd.DataFrame(st.session_state.registro_diario), use_container_width=True)
-        ahorro = max(0, st.session_state.total_litros_tradicional - st.session_state.total_litros_hoy)
-        porc = (ahorro / st.session_state.total_litros_tradicional * 100) if st.session_state.total_litros_tradicional > 0 else 0
-        detalles = "".join([f"  🌱 {v['nombre']}: {v['area']:,.0f} m²\n" for v in st.session_state.cultivos_mapeados.values()])
-        msg = f"""*REPORTE ENJAMBRE VRA* 🚁\nGerente: {st.session_state.usuario['nombre']}\n*SECTORES:*\n{detalles}\n*OPTIMIZACIÓN:*\n🚜 Tradicional: {st.session_state.total_litros_tradicional:,.1f} L\n🎯 Dron VRA: {st.session_state.total_litros_hoy:,.1f} L\n📉 Ahorro: {ahorro:,.1f} L ({porc:.1f}%)\n_Inteligencia PLAS aplicada._"""
-        st.text_area("WhatsApp:", value=msg, height=250); st.button("🚀 ENVIAR TWILIO", type="primary", on_click=enviar_whatsapp_twilio, args=(msg, st.session_state.usuario['telefono']))
+        
+        v_r = sum(1 for r in st.session_state.registro_diario if r["Misión"] == "Riego de Emergencia")
+        v_n = sum(1 for r in st.session_state.registro_diario if r["Misión"] == "Nutrición (Proteínas)")
+        v_p = sum(1 for r in st.session_state.registro_diario if r["Misión"] == "Tratamiento (Anti-plagas)")
+        alerta_z = "Requiere Atención" if hum_r > 40 else "CRÍTICO - Alerta Hídrica"
+        
+        detalles_sectores = ""
+        for v in st.session_state.cultivos_mapeados.values():
+            detalles_sectores += f"  🌱 {v['nombre']}: {v['area']:,.0f} m² | 💧 Req Base: {v['agua']:,.1f} L\n"
+        
+        if not detalles_sectores: detalles_sectores = "  • Sin sectores mapeados\n"
+        
+        ahorro_litros = st.session_state.total_litros_tradicional - st.session_state.total_litros_hoy
+        ahorro_porcentaje = (ahorro_litros / st.session_state.total_litros_tradicional * 100) if st.session_state.total_litros_tradicional > 0 else 0
+            
+        msg_profesional = f"""*📋 REPORTE EJECUTIVO - ENJAMBRE VRA* 🚁🌱
+-----------------------------------
+*👤 Gerente Agrícola:* {st.session_state.usuario.get('nombre', '')}
+*📍 Área Total del Predio:* {st.session_state.parcela_area:,.0f} m²
+
+*🗺️ SECTORES PRODUCTIVOS (PLAS)*
+{detalles_sectores.strip()}
+
+*☁️ CONDICIONES AGROCLIMÁTICAS*
+🌡️ Temp: {tr}°C | 💧 Humedad: {hr}% | 💨 Viento: {vr} km/h
+
+*📊 ESTADO HÍDRICO DEL SUELO*
+🟢 Sectores Óptimos: Estable (>60%)
+🟡 Sectores Medios: Estrés Leve (40-60%)
+🔴 Zona Crítica: {alerta_z} (<30%)
+
+*🚀 OPERACIONES REALIZADAS HOY*
+🚁 Total Vuelos Desplegados: {len(st.session_state.registro_diario)}
+  • 💧 Riegos de Emergencia: {v_r}
+  • 💊 Nutrición (Proteínas): {v_n}
+  • 🛡️ Tratamiento (Antiplagas): {v_p}
+
+*💰 IMPACTO Y OPTIMIZACIÓN DE RECURSOS (VRA vs TRADICIONAL)*
+🚜 Consumo Método Tradicional: {st.session_state.total_litros_tradicional:,.1f} Litros
+🎯 Consumo Hídrico Dron VRA: {st.session_state.total_litros_hoy:,.1f} Litros
+📉 Ahorro Hídrico Logrado: {ahorro_litros:,.1f} Litros ({ahorro_porcentaje:.1f}%)
+
+_Generado automáticamente por Inteligencia Geoespacial PLAS._"""
+        
+        st.text_area("Mensaje Twilio:", value=msg_profesional, height=450, disabled=True)
+        if st.button("🚀 ENVIAR REPORTE OFICIAL POR TWILIO", type="primary", use_container_width=True):
+            exito, sid = enviar_whatsapp_twilio(msg_profesional, st.session_state.usuario.get('telefono', ''))
+            if exito: st.success(f"Reporte enviado con éxito al celular registrado. SID: {sid}")
+            else: st.error(f"Error de envío. Revisa credenciales: {sid}")
 
     with tab4:
         st.header("📉 Gemelo Digital: Proyección de Cosecha (IA)")
         st.markdown('<div class="ai-card"><h3>Simulador de Rendimiento Predictivo</h3>Ajuste el presupuesto hídrico para ver cómo la IA de Enjambre VRA predice su producción.</div>', unsafe_allow_html=True)
+        
         inversion = st.select_slider("Factor de Optimización VRA:", options=["Mínimo", "Tradicional", "Optimizado VRA", "Máximo Rendimiento"], value="Optimizado VRA")
         eficiencia = {"Mínimo": 0.4, "Tradicional": 0.75, "Optimizado VRA": 1.0, "Máximo Rendimiento": 0.95}[inversion]
         
@@ -386,64 +556,89 @@ elif st.session_state.paso == 'dashboard':
             db = DB_CULTIVOS_PLAS.get(v['nombre'], {"yield_base": 10, "price_ton": 1000})
             ton_esperadas = (v['area'] / 10000) * db['yield_base'] * eficiencia
             ganancia = ton_esperadas * db['price_ton']
-            datos_sim.append({"Cultivo": v['nombre'], "Área (m²)": f"{v['area']:,.0f}", "Cosecha (Ton)": f"{ton_esperadas:,.1f}", "Ingresos Est. ($)": f"${ganancia:,.0f}"})
-        
+            
+            datos_sim.append({
+                "Cultivo": v['nombre'], 
+                "Área (m²)": f"{v['area']:,.0f}", 
+                "Cosecha (Ton)": f"{ton_esperadas:,.1f}", 
+                "Ingresos Est. ($)": f"${ganancia:,.0f}"
+            })
+            
         if datos_sim:
             df_crudo = pd.DataFrame([{ "Cultivo": d["Cultivo"], "Cosecha (Ton)": float(d["Cosecha (Ton)"].replace(',', '')) } for d in datos_sim])
             c1, c2 = st.columns(2)
-            with c1: st.subheader("Predicción de Producción"); st.bar_chart(df_crudo.set_index("Cultivo")["Cosecha (Ton)"])
-            with c2: st.subheader("Proyección Económica"); st.dataframe(pd.DataFrame(datos_sim), use_container_width=True, hide_index=True)
+            with c1: 
+                st.subheader("Predicción de Producción")
+                st.bar_chart(df_crudo.set_index("Cultivo")["Cosecha (Ton)"])
+            with c2: 
+                st.subheader("Proyección Económica")
+                st.dataframe(pd.DataFrame(datos_sim), use_container_width=True, hide_index=True)
+                
             st.success(f"💡 Sugerencia IA: Mantener el escenario '{inversion}' para maximizar el ROI foliar.")
-        else: st.warning("Mapee sectores en la Fase 3 para generar el Gemelo Digital.")
+        else: 
+            st.warning("Mapee sectores en la Fase 3 para generar el Gemelo Digital.")
 
-    # 🚀 NUEVA FUNCIONALIDAD: ASISTENTE IA (CHATBOT SIMULADO EN BASE A MEMORIA)
+    # 🚀 SOLUCIÓN 2: CONSULTOR IA MEJORADO (NLP AVANZADO Y UI LIMPIA)
     with tab5:
         st.header("🤖 Consultor Agrotecnológico (IA)")
         st.markdown('<div class="ai-card">Haga consultas directas sobre su predio en lenguaje natural. Agri-Brain cruza los datos climáticos, de vuelos y proyecciones de cosecha en tiempo real.</div>', unsafe_allow_html=True)
         
-        # Contenedor del chat
-        for msg in st.session_state.chat_history:
-            with st.chat_message(msg["role"]):
-                st.markdown(msg["content"])
+        # UI limpia: El chat se contiene dentro de un cuadro con scroll automático
+        contenedor_chat = st.container(height=400)
+        
+        with contenedor_chat:
+            for msg in st.session_state.chat_history:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
                 
-        # Input del usuario
-        prompt = st.chat_input("Escribe tu consulta aquí (ej: 'dame un resumen', 'cuánto ahorré de agua', 'clima')...")
+        prompt = st.chat_input("Escribe tu consulta aquí (ej: 'cuanto espacio libre me queda', 'cuánto ahorré de agua', 'clima de mañana')...")
         if prompt:
-            # 1. Agregar y mostrar mensaje del usuario
             st.session_state.chat_history.append({"role": "user", "content": prompt})
-            with st.chat_message("user"):
-                st.markdown(prompt)
-                
-            # 2. Motor NLP (Simulado) - Analiza la memoria y genera respuesta
+            
             prompt_lower = prompt.lower()
             respuesta_ia = ""
             
-            # Contexto de la sesión
-            area_t = st.session_state.parcela_area
-            clima = st.session_state.clima_real
-            ahorro = max(0, st.session_state.total_litros_tradicional - st.session_state.total_litros_hoy)
-            cultivos = ", ".join([v['nombre'] for v in st.session_state.cultivos_mapeados.values()]) if st.session_state.cultivos_mapeados else "Ninguno"
-            vuelos = len(st.session_state.registro_diario)
-            
-            if "resumen" in prompt_lower or "estado" in prompt_lower:
-                respuesta_ia = f"📊 **Resumen Actualizado del Predio:**\n- **Área Mapeada:** {area_t:,.0f} m².\n- **Cultivos Activos:** {cultivos}.\n- **Clima Local:** {clima['temp']}°C, Humedad {clima['hum']}%, Viento {clima['viento']} km/h.\n- **Misiones de Dron Realizadas Hoy:** {vuelos} vuelos.\n\nTodo parece operar dentro de los márgenes óptimos de la plataforma PLAS."
-            elif "agua" in prompt_lower or "ahorro" in prompt_lower or "litros" in prompt_lower:
+            # 🧠 MOTOR DE NLP SIMULADO (MEJORADO PARA COMPRENDER INTENCIONES)
+            # 1. ESPACIO / ÁREA
+            if any(palabra in prompt_lower for palabra in ["espacio", "area", "área", "terreno", "tamaño", "metros", "m2", "utilizado", "libre", "cuanto uso", "cuánto uso"]):
+                respuesta_ia = f"🗺️ **Análisis de Superficie Georreferenciada:**\n\n- **Área Total del Predio:** {area_t:,.0f} m².\n- **Área Cultivada (Usada):** {area_u:,.0f} m².\n- **Área Disponible (Libre):** {area_l:,.0f} m².\n\nActualmente tienes {len(st.session_state.cultivos_mapeados)} sectores productivos registrados. Tienes un {(area_u/area_t)*100 if area_t>0 else 0:.1f}% de tu terreno optimizado y mapeado en PLAS."
+
+            # 2. CLIMA (HOY Y MAÑANA)
+            elif any(palabra in prompt_lower for palabra in ["clima", "tiempo", "temperatura", "mañana", "pronostico", "pronóstico", "viento", "calor", "frio"]):
+                if "mañana" in prompt_lower or "futuro" in prompt_lower:
+                    respuesta_ia = f"☁️ **Pronóstico (Simulado para Mañana):**\nBasado en los modelos de telemetría, se espera que la temperatura ronde los **{tr + 2.5:.1f}°C** (leve aumento térmico), con vientos estables de {vr} km/h. \n\n💡 *Sugerencia VRA:* Te recomiendo planificar los riegos temprano por la mañana (05:30 AM) para evitar evaporación por estrés térmico."
+                else:
+                    respuesta_ia = f"☁️ **Condiciones Actuales en Terreno:**\n- Temperatura: **{tr}°C**\n- Viento: **{vr} km/h**\n- Humedad Ambiental: **{hr}%**\n\nCon estos parámetros, estamos en una ventana operativa perfecta para vuelos VRA sin deriva de gotas (Drift Seguro)."
+
+            # 3. CULTIVOS ESPECÍFICOS
+            elif any(palabra in prompt_lower for palabra in ["cultivo", "plantas", "sembrado", "que tengo", "sectores"]):
+                if st.session_state.cultivos_mapeados:
+                    det = "\n".join([f"- 🌱 **{v['nombre']}**: {v['area']:,.0f} m² (Requiere {v['agua']:,.1f} Litros base)" for v in st.session_state.cultivos_mapeados.values()])
+                    respuesta_ia = f"🌾 **Tus Cultivos Actuales:**\n{det}\n\nPuedes ver la distribución y el estado de estrés hídrico exacto en el mapa de la pestaña de Logística."
+                else:
+                    respuesta_ia = "Aún no has mapeado ningún cultivo. Ve a la 'Fase PLAS' para dibujar tus sectores productivos en el mapa."
+
+            # 4. AGUA Y AHORRO
+            elif any(palabra in prompt_lower for palabra in ["agua", "ahorro", "litros", "riego", "gasto", "consumo"]):
+                ahorro_neto = st.session_state.total_litros_tradicional - st.session_state.total_litros_hoy
                 if st.session_state.total_litros_tradicional > 0:
-                    porc = (ahorro / st.session_state.total_litros_tradicional * 100)
-                    respuesta_ia = f"💧 **Reporte Hídrico y ROI:**\nLa inteligencia VRA ha inyectado **{st.session_state.total_litros_hoy:,.1f} L** hoy. Si hubieras usado métodos tradicionales (tractores/riego tendido), el gasto proyectado era de {st.session_state.total_litros_tradicional:,.1f} L.\n\n✅ **Ahorro Neto:** {ahorro:,.1f} Litros (**{porc:.1f}% de optimización** hídrica lograda)."
+                    porc = (ahorro_neto / st.session_state.total_litros_tradicional * 100)
+                    respuesta_ia = f"💧 **Reporte Hídrico y ROI:**\nLa inteligencia VRA ha inyectado estratégicamente **{st.session_state.total_litros_hoy:,.1f} Litros** el día de hoy.\n\nSi hubieras usado métodos tradicionales (tractores/riego tendido), el gasto proyectado era de {st.session_state.total_litros_tradicional:,.1f} Litros.\n\n✅ **Ahorro Neto Conseguido:** {ahorro_neto:,.1f} Litros (**{porc:.1f}% de optimización** hídrica lograda frente a agricultura tradicional)."
                 else:
-                    respuesta_ia = "💧 Aún no se han registrado operaciones de Riego de Emergencia hoy. Despliega el dron en el Centro de Mando para comenzar a medir el ahorro hídrico."
-            elif "clima" in prompt_lower or "tiempo" in prompt_lower or "temperatura" in prompt_lower:
-                if clima['temp'] > 25:
-                    respuesta_ia = f"☀️ **Alerta Climática:**\nLa temperatura actual es de **{clima['temp']}°C**. Existe alto riesgo de evaporación y estrés hídrico. Te recomiendo NO realizar misiones de nutrición ahora. Espera a que baje el sol, idealmente cerca de las 18:00 hrs."
-                else:
-                    respuesta_ia = f"☁️ **Condiciones Agroclimáticas:**\nCon una temperatura de **{clima['temp']}°C** y un viento de **{clima['viento']} km/h**, estamos en una ventana operativa perfecta para vuelos de precisión VRA."
-            elif "cosecha" in prompt_lower or "plata" in prompt_lower or "ganancia" in prompt_lower or "roi" in prompt_lower:
-                respuesta_ia = f"📈 **Gemelo Digital:**\nBasado en los {area_t:,.0f} m² mapeados de *{cultivos}*, y si mantienes el factor de riego optimizado VRA, la proyección de la Inteligencia Artificial indica que el modelo maximizará el peso y calibre de los frutos. Te invito a revisar la gráfica exacta en la pestaña **'Gemelo Digital (IA)'** para ver los ingresos proyectados en dólares."
+                    respuesta_ia = "💧 Aún no se han registrado operaciones hídricas o de fumigación. Despliega el dron en el 'Centro de Mando Logístico' para que yo pueda comenzar a calcular y medir tu ahorro de agua frente a los métodos de maquinaria tradicional."
+
+            # 5. COSECHA E INGRESOS
+            elif any(palabra in prompt_lower for palabra in ["cosecha", "plata", "ganancia", "roi", "dinero", "produccion", "producción"]):
+                respuesta_ia = f"📈 **Gemelo Digital y Proyección Económica:**\nBasado en los {area_t:,.0f} m² mapeados, la proyección de nuestra Inteligencia Artificial indica que al usar drones VRA, maximizarás el peso y calibre de tus frutos.\n\nTe invito a revisar la gráfica exacta en la pestaña **'Gemelo Digital (IA)'** para ver el desglose en Toneladas y los ingresos proyectados en dólares ($) según tu nivel de inversión en hidratación."
+
+            # 6. RESUMEN GENERAL
+            elif any(palabra in prompt_lower for palabra in ["resumen", "estado", "general", "como vamos", "cómo vamos"]):
+                ahorro_neto = st.session_state.total_litros_tradicional - st.session_state.total_litros_hoy
+                respuesta_ia = f"📊 **Resumen Ejecutivo Actualizado:**\n- **Área Total Predio:** {area_t:,.0f} m².\n- **Área Usada:** {area_u:,.0f} m².\n- **Clima Local:** {tr}°C.\n- **Vuelos de Dron Hoy:** {len(st.session_state.registro_diario)} misiones realizadas.\n- **Ahorro Hídrico Total:** {ahorro_neto:,.1f} Litros.\n\n🚀 Todo opera dentro de los márgenes óptimos de la plataforma PLAS."
+
+            # FALLBACK INTELIGENTE
             else:
-                respuesta_ia = "🤖 **Agri-Brain:** Entiendo tu consulta. Como IA especializada en tu campo, mis mayores fortalezas son analizar el **Clima**, calcular tu **Ahorro de Agua**, darte un **Resumen de Misiones** o proyectar tu **Cosecha**. ¿Sobre cuál de estos puntos te gustaría profundizar?"
-                
-            # 3. Guardar y mostrar respuesta de la IA
+                respuesta_ia = "🤖 **Agri-Brain:** No logré entender tu pregunta exacta. Como tu IA consultora, puedo procesar tu telemetría si me preguntas sobre:\n\n- 🗺️ **Mi Espacio** *(Ej: ¿Cuánto espacio libre me queda?)*\n- 💧 **Ahorro Hídrico** *(Ej: ¿Cuánto hemos ahorrado hoy?)*\n- ☁️ **Clima** *(Ej: ¿Cómo estará la temperatura mañana?)*\n- 🌾 **Cultivos Mapeados** *(Ej: ¿Qué sectores tengo sembrados?)*\n- 📈 **Proyección Económica** *(Ej: Háblame de las ganancias o de la cosecha)*"
+            
             st.session_state.chat_history.append({"role": "assistant", "content": respuesta_ia})
-            with st.chat_message("assistant"):
-                st.markdown(respuesta_ia)
+            st.rerun() # Fuerza a recargar la página para que el chat se muestre fluido dentro del contenedor
