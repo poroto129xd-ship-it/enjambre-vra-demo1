@@ -385,7 +385,7 @@ elif st.session_state.paso == 'onboarding_cultivos':
 # FASE 4: DASHBOARD PRINCIPAL
 # ==========================================
 elif st.session_state.paso == 'dashboard':
-    st.title(f"📊 Dashboard Enjambre VRA | Usuario: {st.session_state.usuario.get('nombre', '')}")
+    st.title(f" Dashboard Enjambre VRA | Usuario: {st.session_state.usuario.get('nombre', '')}")
     
     zonas_dict = {}
     if st.session_state.poligono_coords:
