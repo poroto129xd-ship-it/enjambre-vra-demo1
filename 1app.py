@@ -22,7 +22,7 @@ def cargar_imagen_base64(ruta_imagen):
     except FileNotFoundError:
         return None
 
-# --- 🚀 SOLUCIÓN 1: CURSOR DE HORMIGA ESTÁTICO (CSS PURO) ---
+# --- 🚀 HACK DE JAVASCRIPT: CURSOR DE HORMIGA ESTÁTICO (CSS PURO) ---
 st.markdown("""
     <style>
     body, .stApp, [data-testid="stAppViewContainer"], * {
@@ -144,6 +144,8 @@ if 'total_litros_hoy' not in st.session_state: st.session_state.total_litros_hoy
 if 'total_litros_tradicional' not in st.session_state: st.session_state.total_litros_tradicional = 0
 if 'ruta_dron_actual' not in st.session_state: st.session_state.ruta_dron_actual = []
 if 'color_dron_actual' not in st.session_state: st.session_state.color_dron_actual = "cyan"
+if 'mostrar_animacion_dron' not in st.session_state: st.session_state.mostrar_animacion_dron = False
+if 'patron_animacion' not in st.session_state: st.session_state.patron_animacion = ""
 
 # --- 🚀 FUNCIONES MATEMÁTICAS ---
 def calcular_area_poligono(coords):
@@ -373,25 +375,77 @@ elif st.session_state.paso == 'dashboard':
             boton_deshabilitado = es_riesgoso and not st.checkbox("Declaro entender los riesgos térmicos.")
             
             if st.button("🚀 DESPLEGAR DRON", type="primary", disabled=boton_deshabilitado, use_container_width=True):
-                # 🚀 LOGICA DE CÁLCULO DE AHORRO Y RUTA
-                if tipo_m == "Riego de Emergencia":
-                    litros = round(st.session_state.agua_requerida_total / (1 if zona_o == "Toda la Parcela" else 3), 1)
-                    st.session_state.total_litros_tradicional += st.session_state.agua_requerida_total # Acumula gasto si fuera tractor
-                else:
-                    litros = 0
                 
-                st.session_state.total_litros_hoy += litros
+                # 🚀 LÓGICA DE AHORRO HÍDRICO REAL (VRA ULV vs TRACTOR TRADICIONAL)
+                agua_base = st.session_state.agua_requerida_total
+                factor_zona = 1.0 if zona_o == "Toda la Parcela" else 0.333
+                
+                if tipo_m == "Riego de Emergencia":
+                    litros_trad = agua_base * 1.15 * factor_zona # 100% + 15% escorrentía
+                    litros_vr = agua_base * 0.12 * factor_zona   # Dron usa 12% para hidratación foliar
+                elif tipo_m == "Nutrición (Proteínas)":
+                    litros_trad = (agua_base * 0.20) * factor_zona 
+                    litros_vr = (agua_base * 0.20) * 0.10 * factor_zona # Ahorro 90% mezcla foliar
+                else: # Anti-plagas
+                    litros_trad = (agua_base * 0.15) * factor_zona
+                    litros_vr = (agua_base * 0.15) * 0.08 * factor_zona
+
+                litros_trad = round(litros_trad, 1)
+                litros_vr = round(litros_vr, 1)
+
+                st.session_state.total_litros_tradicional += litros_trad
+                st.session_state.total_litros_hoy += litros_vr
+                
                 st.session_state.color_dron_actual = "cyan" if tipo_m == "Riego de Emergencia" else ("orange" if tipo_m == "Nutrición (Proteínas)" else "red")
                 st.session_state.ruta_dron_actual = calcular_ruta_patron(zonas_v[zona_o], patron_vuelo, c[0], c[1])
                 
-                with st.spinner(f"🚁 Dron en operación sobre {zona_o}. Ejecutando patrón {patron_vuelo}..."):
-                    time.sleep(10)
-                    
-                st.success(f"✅ Misión de {tipo_m} finalizada con éxito en {zona_o}.")
-                if litros > 0: st.info(f"💧 Agua inyectada (Base PLAS): {litros:,.1f} L.")
-                st.session_state.registro_diario.append({"Hora": f"{hora_actual}:00", "Misión": tipo_m, "Zona": zona_o, "Agua": f"{litros} L"})
-        
+                st.session_state.mostrar_animacion_dron = True
+                st.session_state.patron_animacion = patron_vuelo
+                
+                with st.spinner(f"🛰️ Conectando telemetría VRA. Trazando ruta hacia {zona_o}..."):
+                    time.sleep(1.5)
+                
+                st.session_state.registro_diario.append({"Hora": f"{hora_actual}:00", "Misión": tipo_m, "Zona": zona_o, "Agua": f"{litros_vr} L"})
+                st.rerun() 
+                
         with col_m:
+            if st.session_state.get('mostrar_animacion_dron', False):
+                st.session_state.mostrar_animacion_dron = False 
+                
+                if "Zig-Zag" in st.session_state.patron_animacion:
+                    kf_dron = """
+                    0% { top: 5%; left: 5%; transform: scaleX(1); }
+                    20% { top: 5%; left: 85%; transform: scaleX(1); }
+                    21% { top: 35%; left: 85%; transform: scaleX(-1); }
+                    40% { top: 35%; left: 5%; transform: scaleX(-1); }
+                    41% { top: 65%; left: 5%; transform: scaleX(1); }
+                    60% { top: 65%; left: 85%; transform: scaleX(1); }
+                    61% { top: 90%; left: 85%; transform: scaleX(-1); }
+                    80% { top: 90%; left: 5%; transform: scaleX(-1); }
+                    100% { top: 50%; left: 45%; transform: scaleX(1); }
+                    """
+                else: 
+                    kf_dron = """
+                    0% { top: 5%; left: 5%; transform: rotate(0deg); }
+                    25% { top: 5%; left: 85%; transform: rotate(90deg); }
+                    50% { top: 85%; left: 85%; transform: rotate(180deg); }
+                    75% { top: 85%; left: 5%; transform: rotate(270deg); }
+                    100% { top: 5%; left: 5%; transform: rotate(360deg); }
+                    """
+                
+                st.markdown(f"""
+                <div style="position: relative; width: 100%; height: 0px; z-index: 999999;">
+                    <div style="position: absolute; font-size: 45px; animation: droneTacticalFlight 10s linear forwards; pointer-events: none; filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.5));">
+                        🚁
+                    </div>
+                </div>
+                <style>
+                @keyframes droneTacticalFlight {{ {kf_dron} }}
+                </style>
+                """, unsafe_allow_html=True)
+                
+                st.success("✅ Misión VRA finalizada con éxito. Trayectoria guardada en bitácora.")
+            
             map_d = folium.Map(location=c, zoom_start=16, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri")
             
             for s in st.session_state.cultivos_mapeados.values():
@@ -418,11 +472,10 @@ elif st.session_state.paso == 'dashboard':
         
         detalles_sectores = ""
         for v in st.session_state.cultivos_mapeados.values():
-            detalles_sectores += f"  🌱 {v['nombre']}: {v['area']:,.0f} m² | 💧 Req: {v['agua']:,.1f} L\n"
+            detalles_sectores += f"  🌱 {v['nombre']}: {v['area']:,.0f} m² | 💧 Req Base: {v['agua']:,.1f} L\n"
         
         if not detalles_sectores: detalles_sectores = "  • Sin sectores mapeados\n"
         
-        # 🚀 SOLUCIÓN 2: COMPARATIVA FINANCIERA (VRA VS TRADICIONAL)
         ahorro_litros = st.session_state.total_litros_tradicional - st.session_state.total_litros_hoy
         ahorro_porcentaje = (ahorro_litros / st.session_state.total_litros_tradicional * 100) if st.session_state.total_litros_tradicional > 0 else 0
             
