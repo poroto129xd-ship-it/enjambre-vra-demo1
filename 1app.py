@@ -10,6 +10,8 @@ import requests
 import base64
 import math
 from twilio.rest import Client
+from folium.elements import MacroElement
+from jinja2 import Template
 
 # --- 1. CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Enjambre VRA | Plataforma Integral", page_icon="🚁", layout="wide")
@@ -139,15 +141,55 @@ if 'centro_mapa' not in st.session_state: st.session_state.centro_mapa = [-33.45
 if 'mapa_buscador_inicial' not in st.session_state: st.session_state.mapa_buscador_inicial = [-33.456, -70.650]
 if 'clima_real' not in st.session_state: st.session_state.clima_real = {"temp": 0, "hum": 0, "viento": 0}
 
-# 🔥 MEMORIA PERMANENTE DEL DRON Y AHORRO DE AGUA
+# MEMORIA PARA EL DRON Y OPTIMIZACIÓN
 if 'total_litros_hoy' not in st.session_state: st.session_state.total_litros_hoy = 0
 if 'total_litros_tradicional' not in st.session_state: st.session_state.total_litros_tradicional = 0
 if 'ruta_dron_actual' not in st.session_state: st.session_state.ruta_dron_actual = []
 if 'color_dron_actual' not in st.session_state: st.session_state.color_dron_actual = "cyan"
 if 'mostrar_animacion_dron' not in st.session_state: st.session_state.mostrar_animacion_dron = False
-if 'patron_animacion' not in st.session_state: st.session_state.patron_animacion = ""
 
-# --- 🚀 FUNCIONES MATEMÁTICAS ---
+# --- 🚀 CLASE PARA ANIMAR EL DRON EN EL MAPA ---
+class MoveDrone(MacroElement):
+    def __init__(self, coords):
+        super().__init__()
+        self.coords = coords
+        self._template = Template(u"""
+        {% macro script(this, kwargs) %}
+        var coords = {{ this.coords }};
+        if(coords.length > 0){
+            var droneIcon = L.divIcon({html: '<div style="font-size:35px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin-top:-20px; margin-left:-20px;">🚁</div>', className: 'empty'});
+            var droneMarker = L.marker(coords[0], {icon: droneIcon}).addTo({{this._parent.get_name()}});
+            var i = 0;
+            function animateDrone() {
+                if (i < coords.length) {
+                    droneMarker.setLatLng(coords[i]);
+                    i++;
+                    setTimeout(animateDrone, 350); // Velocidad del dron en ms
+                }
+            }
+            setTimeout(animateDrone, 500);
+        }
+        {% endmacro %}
+        """)
+
+# --- 🚀 FUNCIONES MATEMÁTICAS Y DE GEOFENCING ---
+def punto_en_poligono(x, y, poligono):
+    """Algoritmo Ray-Casting para verificar si un punto está dentro de un polígono"""
+    n = len(poligono)
+    inside = False
+    p1x, p1y = poligono[0]
+    for i in range(n + 1):
+        p2x, p2y = poligono[i % n]
+        if y > min(p1y, p2y):
+            if y <= max(p1y, p2y):
+                if x <= max(p1x, p2x):
+                    if p1y != p2y:
+                        xints = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                    if p1x == p2x or x <= xints:
+                        inside = not inside
+        p1x, p1y = p2x, p2y
+    return inside
+
 def calcular_area_poligono(coords):
     if not coords or len(coords) < 3: return 0
     R = 6378137
@@ -263,7 +305,7 @@ elif st.session_state.paso == 'onboarding_mapa':
             st.session_state.paso = 'onboarding_cultivos'; st.rerun()
 
 # ==========================================
-# FASE 3: MAPEADOR INTERACTIVO PLAS
+# FASE 3: MAPEADOR INTERACTIVO PLAS (CON RESTRICCIÓN)
 # ==========================================
 elif st.session_state.paso == 'onboarding_cultivos':
     st.header("🌾 Fase PLAS: Mapeo de Sectores Productivos")
@@ -282,16 +324,26 @@ elif st.session_state.paso == 'onboarding_cultivos':
         
         if st.button("💾 GUARDAR SECTOR MAPEADO", use_container_width=True):
             if 'temp_coords' in st.session_state and st.session_state.temp_coords:
-                area_s = calcular_area_poligono(st.session_state.temp_coords)
-                st.session_state.cultivos_mapeados[f"{tipo_cultivo}_{time.time()}"] = {
-                    'nombre': tipo_cultivo,
-                    'coords': [[p[1], p[0]] for p in st.session_state.temp_coords],
-                    'area': area_s,
-                    'agua': area_s * req_h,
-                    'color': color_c
-                }
-                st.success(f"Sector de {tipo_cultivo} guardado con éxito.")
-                st.rerun()
+                # 🚀 SOLUCIÓN 1: GEOFENCING ESTRICTO
+                fuera_del_predio = False
+                for pt in st.session_state.temp_coords:
+                    if not punto_en_poligono(pt[0], pt[1], st.session_state.poligono_coords):
+                        fuera_del_predio = True
+                        break
+                
+                if fuera_del_predio:
+                    st.error("❌ ERROR: Parte del cultivo está fuera de los límites del predio. Por favor dibújalo estrictamente dentro del terreno.")
+                else:
+                    area_s = calcular_area_poligono(st.session_state.temp_coords)
+                    st.session_state.cultivos_mapeados[f"{tipo_cultivo}_{time.time()}"] = {
+                        'nombre': tipo_cultivo,
+                        'coords': [[p[1], p[0]] for p in st.session_state.temp_coords],
+                        'area': area_s,
+                        'agua': area_s * req_h,
+                        'color': color_c
+                    }
+                    st.success(f"✅ Sector de {tipo_cultivo} guardado con éxito.")
+                    st.rerun()
             else: st.warning("Por favor, dibuje el polígono del sector antes de guardar.")
 
         st.markdown("---")
@@ -368,25 +420,22 @@ elif st.session_state.paso == 'dashboard':
             hora_actual = st.slider("Reloj (Simulador):", 0, 23, 14, format="%d:00 hrs")
             tipo_m = st.radio("Misión:", ["Riego de Emergencia", "Nutrición (Proteínas)", "Tratamiento (Anti-plagas)"])
             zona_o = st.selectbox("Objetivo:", list(zonas_v.keys()))
-            
             patron_vuelo = st.selectbox("Patrón de Despliegue Táctico:", ["Zig-Zag (Cobertura Total)", "Perimetral (Bordes)"])
             
             es_riesgoso = (tipo_m == "Riego de Emergencia" and 10 <= hora_actual <= 18)
             boton_deshabilitado = es_riesgoso and not st.checkbox("Declaro entender los riesgos térmicos.")
             
             if st.button("🚀 DESPLEGAR DRON", type="primary", disabled=boton_deshabilitado, use_container_width=True):
-                
-                # 🚀 LÓGICA DE AHORRO HÍDRICO REAL (VRA ULV vs TRACTOR TRADICIONAL)
                 agua_base = st.session_state.agua_requerida_total
                 factor_zona = 1.0 if zona_o == "Toda la Parcela" else 0.333
                 
                 if tipo_m == "Riego de Emergencia":
-                    litros_trad = agua_base * 1.15 * factor_zona # 100% + 15% escorrentía
-                    litros_vr = agua_base * 0.12 * factor_zona   # Dron usa 12% para hidratación foliar
+                    litros_trad = agua_base * 1.15 * factor_zona 
+                    litros_vr = agua_base * 0.12 * factor_zona   
                 elif tipo_m == "Nutrición (Proteínas)":
                     litros_trad = (agua_base * 0.20) * factor_zona 
-                    litros_vr = (agua_base * 0.20) * 0.10 * factor_zona # Ahorro 90% mezcla foliar
-                else: # Anti-plagas
+                    litros_vr = (agua_base * 0.20) * 0.10 * factor_zona 
+                else: 
                     litros_trad = (agua_base * 0.15) * factor_zona
                     litros_vr = (agua_base * 0.15) * 0.08 * factor_zona
 
@@ -399,53 +448,14 @@ elif st.session_state.paso == 'dashboard':
                 st.session_state.color_dron_actual = "cyan" if tipo_m == "Riego de Emergencia" else ("orange" if tipo_m == "Nutrición (Proteínas)" else "red")
                 st.session_state.ruta_dron_actual = calcular_ruta_patron(zonas_v[zona_o], patron_vuelo, c[0], c[1])
                 
+                # 🚀 SOLUCIÓN 2: PREPARAMOS LA BANDERA PARA QUE EL MAPA ANIME EL DRON
                 st.session_state.mostrar_animacion_dron = True
-                st.session_state.patron_animacion = patron_vuelo
                 
-                with st.spinner(f"🛰️ Conectando telemetría VRA. Trazando ruta hacia {zona_o}..."):
-                    time.sleep(1.5)
-                
+                st.toast("🛰️ Dron en operación. Revisa el mapa para seguir la trayectoria.", icon="🚁")
                 st.session_state.registro_diario.append({"Hora": f"{hora_actual}:00", "Misión": tipo_m, "Zona": zona_o, "Agua": f"{litros_vr} L"})
                 st.rerun() 
                 
         with col_m:
-            if st.session_state.get('mostrar_animacion_dron', False):
-                st.session_state.mostrar_animacion_dron = False 
-                
-                if "Zig-Zag" in st.session_state.patron_animacion:
-                    kf_dron = """
-                    0% { top: 5%; left: 5%; transform: scaleX(1); }
-                    20% { top: 5%; left: 85%; transform: scaleX(1); }
-                    21% { top: 35%; left: 85%; transform: scaleX(-1); }
-                    40% { top: 35%; left: 5%; transform: scaleX(-1); }
-                    41% { top: 65%; left: 5%; transform: scaleX(1); }
-                    60% { top: 65%; left: 85%; transform: scaleX(1); }
-                    61% { top: 90%; left: 85%; transform: scaleX(-1); }
-                    80% { top: 90%; left: 5%; transform: scaleX(-1); }
-                    100% { top: 50%; left: 45%; transform: scaleX(1); }
-                    """
-                else: 
-                    kf_dron = """
-                    0% { top: 5%; left: 5%; transform: rotate(0deg); }
-                    25% { top: 5%; left: 85%; transform: rotate(90deg); }
-                    50% { top: 85%; left: 85%; transform: rotate(180deg); }
-                    75% { top: 85%; left: 5%; transform: rotate(270deg); }
-                    100% { top: 5%; left: 5%; transform: rotate(360deg); }
-                    """
-                
-                st.markdown(f"""
-                <div style="position: relative; width: 100%; height: 0px; z-index: 999999;">
-                    <div style="position: absolute; font-size: 45px; animation: droneTacticalFlight 10s linear forwards; pointer-events: none; filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.5));">
-                        🚁
-                    </div>
-                </div>
-                <style>
-                @keyframes droneTacticalFlight {{ {kf_dron} }}
-                </style>
-                """, unsafe_allow_html=True)
-                
-                st.success("✅ Misión VRA finalizada con éxito. Trayectoria guardada en bitácora.")
-            
             map_d = folium.Map(location=c, zoom_start=16, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri")
             
             for s in st.session_state.cultivos_mapeados.values():
@@ -458,6 +468,11 @@ elif st.session_state.paso == 'dashboard':
 
             if st.session_state.ruta_dron_actual: 
                 plugins.AntPath(locations=st.session_state.ruta_dron_actual, color=st.session_state.color_dron_actual, weight=5, dash_array=[10, 20], delay=800, pulse_color='white').add_to(map_d)
+                
+                # 🚀 SOLUCIÓN 2: INYECTAMOS EL SCRIPT DEL DRON ANIMADO SI CORRESPONDE
+                if st.session_state.get('mostrar_animacion_dron', False):
+                    map_d.get_root().add_child(MoveDrone(st.session_state.ruta_dron_actual))
+                    st.session_state.mostrar_animacion_dron = False # Lo apagamos para que vuele solo una vez por clic
             
             st_folium(map_d, height=450, use_container_width=True)
 
@@ -472,7 +487,7 @@ elif st.session_state.paso == 'dashboard':
         
         detalles_sectores = ""
         for v in st.session_state.cultivos_mapeados.values():
-            detalles_sectores += f"  🌱 {v['nombre']}: {v['area']:,.0f} m² | 💧 Req Base: {v['agua']:,.1f} L\n"
+            detalles_sectores += f"  🌱 {v['nombre']}: {v['area']:,.0f} m² | 💧 Req: {v['agua']:,.1f} L\n"
         
         if not detalles_sectores: detalles_sectores = "  • Sin sectores mapeados\n"
         
