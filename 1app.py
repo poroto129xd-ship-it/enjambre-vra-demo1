@@ -22,39 +22,10 @@ def cargar_imagen_base64(ruta_imagen):
     except FileNotFoundError:
         return None
 
-# --- 🚀 HACK DE JAVASCRIPT: CURSOR DE HORMIGA ANIMADA ---
-# Se utiliza un truco de imagen oculta para inyectar JS en Streamlit y cambiar el cursor de todo el navegador
+# --- 🚀 HACK DE JAVASCRIPT: CURSOR DE HORMIGA ANIMADA (CORREGIDO) ---
+# Se utiliza en una sola línea continua para evitar fugas de texto en el renderizador Markdown
 st.markdown("""
-    <img src="dummy_image" onerror="
-        const doc = window.parent.document;
-        if (!doc.getElementById('ant-cursor')) {
-            const ant = doc.createElement('div');
-            ant.id = 'ant-cursor';
-            ant.innerHTML = '🐜';
-            ant.style.position = 'fixed';
-            ant.style.pointerEvents = 'none';
-            ant.style.zIndex = '9999999';
-            ant.style.fontSize = '24px';
-            doc.body.appendChild(ant);
-
-            const style = doc.createElement('style');
-            style.innerHTML = `
-                * { cursor: none !important; }
-                @keyframes antWalk { 
-                    0% { transform: rotate(-15deg); margin-left: 0px; } 
-                    50% { transform: rotate(15deg); margin-left: 3px; } 
-                    100% { transform: rotate(-15deg); margin-left: 0px; } 
-                }
-                #ant-cursor { animation: antWalk 0.2s infinite; }
-            `;
-            doc.head.appendChild(style);
-
-            doc.addEventListener('mousemove', function(e) {
-                ant.style.left = (e.clientX + 2) + 'px';
-                ant.style.top = (e.clientY + 2) + 'px';
-            });
-        }
-    " style="display:none;">
+<img src="x" style="display:none;" onerror="const doc=window.parent.document; if(!doc.getElementById('ant-cursor')){const ant=doc.createElement('div'); ant.id='ant-cursor'; ant.innerHTML='🐜'; ant.style.position='fixed'; ant.style.pointerEvents='none'; ant.style.zIndex='9999999'; ant.style.fontSize='24px'; doc.body.appendChild(ant); const style=doc.createElement('style'); style.innerHTML='* { cursor: none !important; } @keyframes antWalk { 0% { transform: rotate(-15deg); margin-left: 0px; } 50% { transform: rotate(15deg); margin-left: 3px; } 100% { transform: rotate(-15deg); margin-left: 0px; } } #ant-cursor { animation: antWalk 0.2s infinite; }'; doc.head.appendChild(style); doc.addEventListener('mousemove', function(e){ ant.style.left=(e.clientX+2)+'px'; ant.style.top=(e.clientY+2)+'px'; });}">
 """, unsafe_allow_html=True)
 
 st.markdown("""
@@ -359,10 +330,9 @@ elif st.session_state.paso == 'dashboard':
     zonas_v = {"Toda la Parcela": pts_t, "Zona Óptima": [c]+pts_t[0:t1+1]+[c], "Zona Media": [c]+pts_t[t1:t2+1]+[c], "Zona Crítica": [c]+pts_t[t2:]+[pts_t[0], c]}
 
     with st.sidebar:
-        st.header("🕒 Cronograma Operativo")
-        st.markdown('<div class="horario-auto">💧 <b>05:30 AM</b> - Riego General</div>', unsafe_allow_html=True)
-        st.markdown('<div class="horario-auto">🧪 <b>08:00 AM</b> - Aplicación Vitaminas</div>', unsafe_allow_html=True)
-        st.markdown('<div class="horario-auto">🛡️ <b>06:00 PM</b> - Control Antiplagas</div>', unsafe_allow_html=True)
+        st.header("🕒 Cronograma")
+        st.markdown('<div class="horario-auto">💧 05:30 AM - Riego</div>', unsafe_allow_html=True)
+        st.markdown('<div class="horario-auto">🛡️ 06:00 PM - Control</div>', unsafe_allow_html=True)
 
     tab1, tab2, tab3 = st.tabs(["🌱 Sensores", "🚁 Logística Dron", "📈 Reporte Maestro"])
     
@@ -467,6 +437,7 @@ elif st.session_state.paso == 'dashboard':
         detalles_sectores = ""
         for v in st.session_state.cultivos_mapeados.values():
             detalles_sectores += f"  🌱 {v['nombre']}: {v['area']:,.0f} m² | 💧 Req: {v['agua']:,.1f} L\n"
+        
         if not detalles_sectores: detalles_sectores = "  • Sin sectores mapeados\n"
         
         # 🚀 CÁLCULO FINANCIERO DE AHORRO PARA EL INFORME TWILIO
