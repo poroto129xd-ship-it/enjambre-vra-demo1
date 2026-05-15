@@ -11,6 +11,7 @@ import base64
 import math
 import sqlite3
 import hashlib
+import altair as alt
 from twilio.rest import Client
 from folium.elements import MacroElement
 from jinja2 import Template
@@ -90,7 +91,7 @@ st.markdown("""
         border: 1px solid rgba(34, 197, 94, 0.5);
     }
 
-    /* 🚀 SOLUCIÓN: TABLAS DE CRISTAL (GLASSMORPHISM) SUTILES Y ELEGANTES */
+    /* TABLAS DE CRISTAL (GLASSMORPHISM) SUTILES Y ELEGANTES */
     .glass-table {
         width: 100%;
         border-collapse: collapse;
@@ -116,10 +117,10 @@ st.markdown("""
     .glass-table td {
         padding: 12px 18px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        font-weight: 300; /* Texto más fino y sutil */
+        font-weight: 300; 
     }
     .glass-table tr:hover td {
-        background: rgba(255, 255, 255, 0.08); /* Efecto hover */
+        background: rgba(255, 255, 255, 0.08); 
         transition: background 0.2s ease;
     }
     .glass-table tr:last-child td {
@@ -128,16 +129,28 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Fondo agrícola animado
 fondo_base64 = cargar_imagen_base64("assets/fondo_campo.jpg")
+
 if fondo_base64:
-    fondo_css = f'background-image: linear-gradient(rgba(0, 25, 10, 0.72), rgba(0, 40, 18, 0.84)), url("data:image/jpg;base64,{fondo_base64}"); background-size: 115%; background-position: center; background-attachment: fixed; animation: moverFondoCampo 28s ease-in-out infinite alternate;'
+    fondo_css = f"""
+    background-image:
+        linear-gradient(rgba(0, 25, 10, 0.72), rgba(0, 40, 18, 0.84)),
+        url("data:image/jpg;base64,{fondo_base64}");
+    background-size: 115%;
+    background-position: center;
+    background-attachment: fixed;
+    animation: moverFondoCampo 28s ease-in-out infinite alternate;
+    """
 else:
-    fondo_css = 'background: linear-gradient(135deg, #052e16 0%, #064e3b 45%, #022c22 100%);'
+    fondo_css = """
+    background:
+        radial-gradient(circle at top left, rgba(34,197,94,0.35), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(132,204,22,0.25), transparent 35%),
+        linear-gradient(135deg, #052e16 0%, #064e3b 45%, #022c22 100%);
+    """
 
 st.markdown(f"<style>.stApp {{ {fondo_css} color: white; }}</style>", unsafe_allow_html=True)
 
-# Animación de Hojas
 st.markdown("""
 <div style="position:fixed; inset:0; pointer-events:none; z-index:1; overflow:hidden;">
     <div class="hoja" style="position:absolute; top:-10%; left:5%; animation: caerHojas 16s linear infinite;">🌿</div>
@@ -689,13 +702,14 @@ elif st.session_state.paso == 'dashboard':
                 st.session_state.color_dron_actual = "cyan" if tipo_m == "Riego de Emergencia" else ("orange" if tipo_m == "Nutrición (Proteínas)" else "red")
                 st.session_state.ruta_dron_actual = calcular_ruta_patron(zonas_v[zona_o], patron_vuelo, c[0], c[1])
                 
-                st.session_state.mostrar_animacion_dron = True
+                # Eliminada la variable mostrar_animacion_dron ya que no se usará helicóptero animado
                 
                 with st.spinner(f"🛰️ Calculando telemetría VRA. Trazando ruta hacia {zona_o}..."):
                     time.sleep(1.5)
                 
                 st.success("✅ Misión VRA procesada. Ruta de telemetría proyectada en el mapa.")
                 st.session_state.registro_diario.append({"Hora": f"{hora_actual}:00", "Misión": tipo_m, "Zona": zona_o, "Agua": f"{round(litros_vr, 1)} L"})
+                st.rerun() 
                 
         with col_m:
             map_d = folium.Map(location=c, zoom_start=16, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri")
@@ -708,7 +722,7 @@ elif st.session_state.paso == 'dashboard':
                 folium.Polygon(locations=zonas_v["Zona Media"], color="#ffc107", weight=2, fill=True, fill_color="#ffc107", fill_opacity=0.45, tooltip="Zona Media (40-60% Humedad)").add_to(map_d)
                 folium.Polygon(locations=zonas_v["Zona Crítica"], color="#dc3545", weight=2, fill=True, fill_color="#dc3545", fill_opacity=0.55, tooltip="Zona Crítica (<30% Humedad)").add_to(map_d)
 
-            # Capa 3: Ruta del Dron Táctica
+            # Ruta del Dron Táctica (Solo la línea punteada AntPath)
             if st.session_state.ruta_dron_actual: 
                 plugins.AntPath(locations=st.session_state.ruta_dron_actual, color=st.session_state.color_dron_actual, weight=5, dash_array=[10, 20], delay=800, pulse_color='white').add_to(map_d)
             
@@ -720,7 +734,6 @@ elif st.session_state.paso == 'dashboard':
     with tab3:
         st.header("Reporte Ejecutivo Operacional")
         
-        # 🚀 SOLUCIÓN: TABLA DE CRISTAL PARA EL REPORTE
         df_registro = pd.DataFrame(st.session_state.registro_diario)
         if not df_registro.empty:
             st.markdown(df_registro.to_html(index=False, classes="glass-table", border=0), unsafe_allow_html=True)
@@ -812,10 +825,34 @@ _Generado automáticamente por Inteligencia Geoespacial PLAS._"""
             c1, c2 = st.columns(2)
             with c1: 
                 st.subheader("Predicción de Producción")
-                st.bar_chart(df_crudo.set_index("Cultivo")["Cosecha (Ton)"])
+                
+                # 🚀 SOLUCIÓN: GRÁFICO ALTAIR ESTILIZADO CON DEGRADADO
+                grafico_ia = alt.Chart(df_crudo).mark_bar(
+                    size=40, 
+                    cornerRadiusTopLeft=6,
+                    cornerRadiusTopRight=6,
+                    opacity=0.85,
+                    color=alt.Gradient(
+                        gradient='linear',
+                        stops=[alt.GradientStop(color='#14532d', offset=0.0), 
+                               alt.GradientStop(color='#4ade80', offset=1.0)], 
+                        x1=1, x2=1, y1=1, y2=0
+                    )
+                ).encode(
+                    x=alt.X('Cultivo:N', title='', axis=alt.Axis(labelAngle=-45, labelColor='#f0fdf4', labelFontSize=12)),
+                    y=alt.Y('Cosecha (Ton):Q', title='Toneladas Estimadas', axis=alt.Axis(gridColor='rgba(187, 247, 208, 0.15)', gridDash=[4, 4], labelColor='#f0fdf4', titleColor='#f0fdf4')),
+                    tooltip=[alt.Tooltip('Cultivo:N'), alt.Tooltip('Cosecha (Ton):Q', format=',.1f', title='Toneladas')]
+                ).properties(
+                    height=380,
+                    background='transparent'
+                ).configure_view(
+                    strokeOpacity=0
+                )
+                
+                st.altair_chart(grafico_ia, use_container_width=True)
+                
             with c2: 
                 st.subheader("Proyección Económica (ROI)")
-                # 🚀 SOLUCIÓN: TABLA DE CRISTAL PARA EL GEMELO DIGITAL
                 df_html = pd.DataFrame(datos_sim).to_html(index=False, classes="glass-table", border=0)
                 st.markdown(df_html, unsafe_allow_html=True)
                 
@@ -824,7 +861,7 @@ _Generado automáticamente por Inteligencia Geoespacial PLAS._"""
             st.warning("Debe mapear sectores productivos en la Fase 3 para poder generar el Gemelo Digital.")
 
     # ------------------------------------------
-    # PESTAÑA 5: CONSULTOR IA
+    # PESTAÑA 5: CONSULTOR IA (MOTOR NLP AVANZADO Y FITOSANITARIO)
     # ------------------------------------------
     with tab5:
         st.header("🤖 Consultor Agrotecnológico (IA)")
