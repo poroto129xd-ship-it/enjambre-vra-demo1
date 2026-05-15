@@ -139,13 +139,11 @@ if 'centro_mapa' not in st.session_state: st.session_state.centro_mapa = [-33.45
 if 'mapa_buscador_inicial' not in st.session_state: st.session_state.mapa_buscador_inicial = [-33.456, -70.650]
 if 'clima_real' not in st.session_state: st.session_state.clima_real = {"temp": 0, "hum": 0, "viento": 0}
 
-# MEMORIA PARA EL DRON Y OPTIMIZACIÓN
+# 🔥 MEMORIA PERMANENTE DEL DRON Y AHORRO DE AGUA
 if 'total_litros_hoy' not in st.session_state: st.session_state.total_litros_hoy = 0
 if 'total_litros_tradicional' not in st.session_state: st.session_state.total_litros_tradicional = 0
 if 'ruta_dron_actual' not in st.session_state: st.session_state.ruta_dron_actual = []
 if 'color_dron_actual' not in st.session_state: st.session_state.color_dron_actual = "cyan"
-if 'mostrar_animacion_dron' not in st.session_state: st.session_state.mostrar_animacion_dron = False
-if 'patron_animacion' not in st.session_state: st.session_state.patron_animacion = ""
 
 # --- 🚀 FUNCIONES MATEMÁTICAS ---
 def calcular_area_poligono(coords):
@@ -368,15 +366,17 @@ elif st.session_state.paso == 'dashboard':
             hora_actual = st.slider("Reloj (Simulador):", 0, 23, 14, format="%d:00 hrs")
             tipo_m = st.radio("Misión:", ["Riego de Emergencia", "Nutrición (Proteínas)", "Tratamiento (Anti-plagas)"])
             zona_o = st.selectbox("Objetivo:", list(zonas_v.keys()))
+            
             patron_vuelo = st.selectbox("Patrón de Despliegue Táctico:", ["Zig-Zag (Cobertura Total)", "Perimetral (Bordes)"])
             
             es_riesgoso = (tipo_m == "Riego de Emergencia" and 10 <= hora_actual <= 18)
             boton_deshabilitado = es_riesgoso and not st.checkbox("Declaro entender los riesgos térmicos.")
             
             if st.button("🚀 DESPLEGAR DRON", type="primary", disabled=boton_deshabilitado, use_container_width=True):
+                # 🚀 LOGICA DE CÁLCULO DE AHORRO Y RUTA
                 if tipo_m == "Riego de Emergencia":
                     litros = round(st.session_state.agua_requerida_total / (1 if zona_o == "Toda la Parcela" else 3), 1)
-                    st.session_state.total_litros_tradicional += st.session_state.agua_requerida_total 
+                    st.session_state.total_litros_tradicional += st.session_state.agua_requerida_total # Acumula gasto si fuera tractor
                 else:
                     litros = 0
                 
@@ -384,55 +384,14 @@ elif st.session_state.paso == 'dashboard':
                 st.session_state.color_dron_actual = "cyan" if tipo_m == "Riego de Emergencia" else ("orange" if tipo_m == "Nutrición (Proteínas)" else "red")
                 st.session_state.ruta_dron_actual = calcular_ruta_patron(zonas_v[zona_o], patron_vuelo, c[0], c[1])
                 
-                # Activamos la bandera para mostrar la animación del dron sobre el mapa
-                st.session_state.mostrar_animacion_dron = True
-                st.session_state.patron_animacion = patron_vuelo
-                
-                with st.spinner(f"🛰️ Conectando telemetría VRA. Trazando ruta hacia {zona_o}..."):
-                    time.sleep(1.5) # Simulación de conexión técnica, para luego renderizar la animación visual
-                
+                with st.spinner(f"🚁 Dron en operación sobre {zona_o}. Ejecutando patrón {patron_vuelo}..."):
+                    time.sleep(10)
+                    
+                st.success(f"✅ Misión de {tipo_m} finalizada con éxito en {zona_o}.")
+                if litros > 0: st.info(f"💧 Agua inyectada (Base PLAS): {litros:,.1f} L.")
                 st.session_state.registro_diario.append({"Hora": f"{hora_actual}:00", "Misión": tipo_m, "Zona": zona_o, "Agua": f"{litros} L"})
-                st.rerun() # Forzamos recarga para que el mapa muestre la animación
-                
+        
         with col_m:
-            # 🚀 SOLUCIÓN 2: ANIMACIÓN TÁCTICA DEL DRON (LIMITADA AL MAPA Y SU RECORRIDO)
-            if st.session_state.get('mostrar_animacion_dron', False):
-                st.session_state.mostrar_animacion_dron = False # Se resetea para no repetirse
-                
-                if "Zig-Zag" in st.session_state.patron_animacion:
-                    kf_dron = """
-                    0% { top: 5%; left: 5%; transform: scaleX(1); }
-                    20% { top: 5%; left: 85%; transform: scaleX(1); }
-                    21% { top: 35%; left: 85%; transform: scaleX(-1); }
-                    40% { top: 35%; left: 5%; transform: scaleX(-1); }
-                    41% { top: 65%; left: 5%; transform: scaleX(1); }
-                    60% { top: 65%; left: 85%; transform: scaleX(1); }
-                    61% { top: 90%; left: 85%; transform: scaleX(-1); }
-                    80% { top: 90%; left: 5%; transform: scaleX(-1); }
-                    100% { top: 50%; left: 45%; transform: scaleX(1); }
-                    """
-                else: # Perimetral
-                    kf_dron = """
-                    0% { top: 5%; left: 5%; transform: rotate(0deg); }
-                    25% { top: 5%; left: 85%; transform: rotate(90deg); }
-                    50% { top: 85%; left: 85%; transform: rotate(180deg); }
-                    75% { top: 85%; left: 5%; transform: rotate(270deg); }
-                    100% { top: 5%; left: 5%; transform: rotate(360deg); }
-                    """
-                
-                st.markdown(f"""
-                <div style="position: relative; width: 100%; height: 0px; z-index: 999999;">
-                    <div style="position: absolute; font-size: 45px; animation: droneTacticalFlight 10s linear forwards; pointer-events: none; filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.5));">
-                        🚁
-                    </div>
-                </div>
-                <style>
-                @keyframes droneTacticalFlight {{ {kf_dron} }}
-                </style>
-                """, unsafe_allow_html=True)
-                
-                st.success("✅ Misión VRA finalizada con éxito. Trayectoria guardada en bitácora.")
-            
             map_d = folium.Map(location=c, zoom_start=16, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri")
             
             for s in st.session_state.cultivos_mapeados.values():
@@ -463,7 +422,7 @@ elif st.session_state.paso == 'dashboard':
         
         if not detalles_sectores: detalles_sectores = "  • Sin sectores mapeados\n"
         
-        # 🚀 SOLUCIÓN 3: COMPARATIVA FINANCIERA (VRA VS TRADICIONAL)
+        # 🚀 SOLUCIÓN 2: COMPARATIVA FINANCIERA (VRA VS TRADICIONAL)
         ahorro_litros = st.session_state.total_litros_tradicional - st.session_state.total_litros_hoy
         ahorro_porcentaje = (ahorro_litros / st.session_state.total_litros_tradicional * 100) if st.session_state.total_litros_tradicional > 0 else 0
             
@@ -489,10 +448,10 @@ elif st.session_state.paso == 'dashboard':
   • 💊 Nutrición (Proteínas): {v_n}
   • 🛡️ Tratamiento (Antiplagas): {v_p}
 
-*💰 OPTIMIZACIÓN DE RECURSOS (VRA vs TRADICIONAL)*
-🚿 Consumo Método Tradicional: {st.session_state.total_litros_tradicional:,.1f} Litros
+*💰 IMPACTO Y OPTIMIZACIÓN DE RECURSOS (VRA vs TRADICIONAL)*
+🚜 Consumo Método Tradicional: {st.session_state.total_litros_tradicional:,.1f} Litros
 🎯 Consumo Hídrico Dron VRA: {st.session_state.total_litros_hoy:,.1f} Litros
-📉 Ahorro Logrado: {ahorro_litros:,.1f} Litros ({ahorro_porcentaje:.1f}%)
+📉 Ahorro Hídrico Logrado: {ahorro_litros:,.1f} Litros ({ahorro_porcentaje:.1f}%)
 
 _Generado automáticamente por Inteligencia Geoespacial PLAS._"""
         
