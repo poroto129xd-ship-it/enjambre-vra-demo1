@@ -8,6 +8,7 @@ from datetime import date
 import urllib.parse
 import requests
 import base64
+import math
 from twilio.rest import Client
 
 # --- 1. CONFIGURACIÓN DE LA PÁGINA ---
@@ -61,7 +62,6 @@ st.markdown(f"""
 /* Ocultar elementos visuales de Streamlit */
 #MainMenu {{ visibility: hidden; }}
 footer {{ visibility: hidden; }}
-/* LA SOLUCIÓN: Cabecera transparente para que el botón de la esquina superior izquierda se pueda clickear */
 header {{ background: transparent !important; }}
 
 /* Fondo principal agrícola con movimiento */
@@ -190,6 +190,36 @@ if 'total_litros_hoy' not in st.session_state: st.session_state.total_litros_hoy
 
 DB_CULTIVOS = ["Cerezas", "Uva Vinífera", "Paltos", "Nogales", "Maíz", "Trigo", "Arándanos"]
 
+# --- 🚀 FUNCIONES MATEMÁTICAS SATELITALES (ESTILO GOOGLE EARTH ENGINE) ---
+def calcular_area_poligono(coords):
+    """Calcula el área en metros cuadrados de un polígono usando sus coordenadas GPS"""
+    if not coords or len(coords) < 3:
+        return 0
+    
+    # Radio aproximado de la tierra en metros
+    R = 6378137
+    
+    # Calculamos la latitud media para la proyección plana
+    lats = [p[1] for p in coords]
+    mean_lat = math.radians(sum(lats) / len(lats))
+    
+    # Proyectamos las coordenadas esféricas a un plano cartesiano (X, Y en metros)
+    pts_meters = []
+    for p in coords:
+        x = R * math.radians(p[0]) * math.cos(mean_lat)
+        y = R * math.radians(p[1])
+        pts_meters.append((x, y))
+        
+    # Aplicamos la fórmula del área de Gauss (Shoelace Formula)
+    area = 0
+    n = len(pts_meters)
+    for i in range(n):
+        j = (i + 1) % n
+        area += pts_meters[i][0] * pts_meters[j][1]
+        area -= pts_meters[j][0] * pts_meters[i][1]
+        
+    return abs(area) / 2.0
+
 # --- 🚀 FUNCIÓN DE TWILIO ---
 def enviar_whatsapp_twilio(mensaje, telefono_destino):
     try:
@@ -283,7 +313,7 @@ if st.session_state.paso == 'login':
                 st.rerun()
 
 # ==========================================
-# FASE 2: MAPA INTELIGENTE (DIRECCIÓN Y COORDENADAS)
+# FASE 2: MAPA INTELIGENTE Y CÁLCULO DE ÁREA
 # ==========================================
 elif st.session_state.paso == 'onboarding_mapa':
     st.header(f"Bienvenido {st.session_state.usuario.get('nombre', '')} - Delimitación Satelital")
@@ -320,46 +350,54 @@ elif st.session_state.paso == 'onboarding_mapa':
                 st.session_state.mapa_buscador_inicial = [lat_busqueda, lon_busqueda]
                 st.rerun()
 
-    st.write("📍 **Paso 2:** Utilice la herramienta de polígono ⬠ para dibujar las fronteras de su parcela.")
+    st.write("📍 **Paso 2:** Utilice la herramienta de Polígono ⬠ o Rectángulo ⬜ para dibujar su parcela. El sistema calculará el área automáticamente.")
     
+    # MAPA: Se bloquean las líneas y círculos. Se permite solo Polígono y Rectángulo
     mapa_dibujo = folium.Map(location=st.session_state.mapa_buscador_inicial, zoom_start=15, tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr="Esri")
-    draw = plugins.Draw(export=True, position='topleft', draw_options={'polyline':False, 'marker':False, 'circle':False})
+    opciones_dibujo = {'polyline': False, 'polygon': True, 'rectangle': True, 'circle': False, 'marker': False, 'circlemarker': False}
+    draw = plugins.Draw(export=True, position='topleft', draw_options=opciones_dibujo)
     draw.add_to(mapa_dibujo)
     
     mapa_data = st_folium(mapa_dibujo, height=450, use_container_width=True, key="dibujo_inicial")
     
-    st.write("📏 **Paso 3:** Ingrese el área total de la zona (Límite máximo).")
-    area_ingresada = st.number_input("Área total del predio (m²):", min_value=100, max_value=1000000, value=5000, step=100)
-    
-    if st.button("Confirmar Terreno y Continuar ➡️", type="primary"):
-        st.session_state.parcela_area = area_ingresada
-        lat_clima, lon_clima = st.session_state.mapa_buscador_inicial[0], st.session_state.mapa_buscador_inicial[1]
-        
-        if mapa_data and mapa_data.get("all_drawings"):
-            dibujo = mapa_data["all_drawings"][0]
-            st.session_state.poligono_coords = dibujo["geometry"]["coordinates"][0]
+    # CÁLCULO DE ÁREA AUTOMÁTICA EN TIEMPO REAL
+    area_calculada = 0
+    if mapa_data and mapa_data.get("all_drawings"):
+        dibujo = mapa_data["all_drawings"][0]
+        st.session_state.poligono_coords = dibujo["geometry"]["coordinates"][0]
+        area_calculada = calcular_area_poligono(st.session_state.poligono_coords)
+        st.success(f"✅ Satélite detecta un polígono válido. Área calculada computacionalmente: **{area_calculada:,.1f} m²**")
+    else:
+        st.info("ℹ️ Dibuje un polígono en el mapa para activar el cálculo satelital de área.")
+
+    if st.button("Confirmar Área y Continuar ➡️", type="primary"):
+        if area_calculada > 0:
+            st.session_state.parcela_area = int(area_calculada)
+            
             coords_formateadas = [[p[1], p[0]] for p in st.session_state.poligono_coords]
             pts_unicos = coords_formateadas[:-1] if coords_formateadas[0] == coords_formateadas[-1] else coords_formateadas
             st.session_state.centro_mapa = [sum(p[0] for p in pts_unicos) / len(pts_unicos), sum(p[1] for p in pts_unicos) / len(pts_unicos)]
             lon_clima, lat_clima = st.session_state.poligono_coords[0][0], st.session_state.poligono_coords[0][1]
             
-        st.session_state.clima_real = obtener_clima_real(lat_clima, lon_clima)
-        st.session_state.paso = 'onboarding_cultivos'
-        st.rerun()
+            st.session_state.clima_real = obtener_clima_real(lat_clima, lon_clima)
+            st.session_state.paso = 'onboarding_cultivos'
+            st.rerun()
+        else:
+            st.error("❌ Por favor, trace el terreno en el mapa antes de continuar.")
 
 # ==========================================
 # FASE 3: CULTIVOS
 # ==========================================
 elif st.session_state.paso == 'onboarding_cultivos':
     st.header("🌾 Distribución de Plantaciones")
-    st.write(f"Usted cuenta con un límite total de **{st.session_state.parcela_area} m²** registrados.")
+    st.write(f"Usted cuenta con un área satelital de **{st.session_state.parcela_area} m²** registrados.")
     cultivos_seleccionados = st.multiselect("Seleccione cultivos presentes:", DB_CULTIVOS)
     
     if cultivos_seleccionados:
         area_asignada_total = 0
         asignaciones = {}
         for cultivo in cultivos_seleccionados:
-            m2 = st.number_input(f"Asignar m² para {cultivo}:", min_value=0, max_value=st.session_state.parcela_area, value=0, step=100)
+            m2 = st.number_input(f"Asignar m² para {cultivo}:", min_value=0, max_value=st.session_state.parcela_area, value=0, step=1)
             asignaciones[cultivo] = m2
             area_asignada_total += m2
         
@@ -367,7 +405,7 @@ elif st.session_state.paso == 'onboarding_cultivos':
         st.write(f"Espacio utilizado: **{area_asignada_total} m²** de **{st.session_state.parcela_area} m²**")
         
         if area_asignada_total > st.session_state.parcela_area:
-            st.error("❌ ERROR: Has superado el límite de tu parcela.")
+            st.error("❌ ERROR: Has superado el límite espacial de tu parcela.")
         elif area_asignada_total == 0:
             st.warning("⚠️ Debes asignar al menos 1 metro cuadrado para continuar.")
         else:
@@ -397,7 +435,6 @@ elif st.session_state.paso == 'dashboard':
             zonas_dict["Zona Media (Amarilla)"] = [centroide] + pts[t1:t2+1] + [centroide]
             zonas_dict["Zona Crítica (Roja)"] = [centroide] + pts[t2:] + [pts[0], centroide]
 
-    # --- BARRA LATERAL RESTAURADA PARA VER HORARIOS AUTÓNOMOS ---
     with st.sidebar:
         st.header("🕒 Cronograma Operativo")
         st.markdown('<div class="horario-auto">💧 <b>05:30 AM</b> - Riego General</div>', unsafe_allow_html=True)
@@ -518,10 +555,17 @@ _Generado automáticamente por Enjambre VRA._"""
         
         st.text_area("Previsualización del Mensaje:", value=resumen_texto_profesional, height=450, disabled=True)
         
-        if st.button("🚀 Enviar Reporte Oficial por Twilio", type="primary", use_container_width=True):
-            with st.spinner("Conectando con servidores de Twilio..."):
-                exito, msj = enviar_whatsapp_twilio(resumen_texto_profesional, st.session_state.usuario.get('telefono', ''))
-                if exito: 
-                    st.success("✅ Mensaje enviado con éxito a tu celular vía API.")
-                else: 
-                    st.error(f"❌ Falló el envío. Revisa tus Secrets o Sandbox de Twilio: {msj}")
+        col_w1, col_w2 = st.columns(2)
+        
+        with col_w1:
+            if st.button("🚀 Enviar Reporte Oficial por Twilio", type="primary", use_container_width=True):
+                with st.spinner("Conectando con servidores de Twilio..."):
+                    exito, msj = enviar_whatsapp_twilio(resumen_texto_profesional, st.session_state.usuario.get('telefono', ''))
+                    if exito: 
+                        st.success("✅ Mensaje enviado con éxito a tu celular vía API.")
+                    else: 
+                        st.error(f"❌ Falló el envío. Revisa tus Secrets o Sandbox de Twilio: {msj}")
+        
+        with col_w2:
+            link_whatsapp = f"https://api.whatsapp.com/send?phone={st.session_state.usuario.get('telefono', '')}&text={urllib.parse.quote(resumen_texto_profesional)}"
+            st.markdown(f'<a href="{link_whatsapp}" target="_blank" class="whatsapp-btn">Apertura Manual en WhatsApp Web</a>', unsafe_allow_html=True)
