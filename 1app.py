@@ -33,6 +33,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- DISEÑO VISUAL: FONDO AGRÍCOLA ANIMADO ---
+# Recuerda: crear carpeta 'assets' y poner imagen 'fondo_campo.jpg' adentro
 fondo_base64 = cargar_imagen_base64("assets/fondo_campo.jpg")
 
 if fondo_base64:
@@ -56,14 +57,16 @@ else:
         linear-gradient(135deg, #052e16 0%, #064e3b 45%, #022c22 100%);
     """
 
+# --- INYECCIÓN DE ESTILOS (REPARADO) ---
 st.markdown(f"""
 <style>
+
 /* Ocultar elementos visuales de Streamlit */
 #MainMenu {{ visibility: hidden; }}
 footer {{ visibility: hidden; }}
 header {{ visibility: hidden; }}
 
-/* Fondo principal agrícola con movimiento */
+/* Fondo principal agrícola con movimiento (Línea reparada) */
 .stApp {{
     {fondo_css}
     color: white;
@@ -520,10 +523,18 @@ _Generado automáticamente por Enjambre VRA._"""
         
         st.text_area("Previsualización del Mensaje:", value=resumen_texto_profesional, height=450, disabled=True)
         
-        if st.button("🚀 Enviar Reporte Oficial por Twilio", type="primary", use_container_width=True):
-            with st.spinner("Conectando con servidores de Twilio..."):
-                exito, msj = enviar_whatsapp_twilio(resumen_texto_profesional, st.session_state.usuario.get('telefono', ''))
-                if exito: 
-                    st.success("✅ Mensaje enviado con éxito a tu celular vía API.")
-                else: 
-                    st.error(f"❌ Falló el envío. Revisa tus Secrets o Sandbox de Twilio: {msj}")
+        col_w1, col_w2 = st.columns(2)
+        
+        with col_w1:
+            if st.button("🚀 Enviar Reporte Oficial por Twilio", type="primary", use_container_width=True):
+                with st.spinner("Conectando con servidores de Twilio..."):
+                    exito, msj = enviar_whatsapp_twilio(resumen_texto_profesional, st.session_state.usuario.get('telefono', ''))
+                    if exito: 
+                        st.success("✅ Mensaje enviado con éxito a tu celular vía API.")
+                    else: 
+                        st.error(f"❌ Falló el envío. Revisa tus Secrets o Sandbox de Twilio: {msj}")
+        
+        with col_w2:
+            # Botón de respaldo (el antiguo que abre WhatsApp Web)
+            link_whatsapp = f"https://api.whatsapp.com/send?phone={st.session_state.usuario.get('telefono', '')}&text={urllib.parse.quote(resumen_texto_profesional)}"
+            st.markdown(f'<a href="{link_whatsapp}" target="_blank" class="whatsapp-btn">Apertura Manual en WhatsApp Web</a>', unsafe_allow_html=True)
