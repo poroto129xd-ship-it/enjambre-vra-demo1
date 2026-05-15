@@ -55,40 +55,99 @@ st.markdown("""
     }
     
     /* Estilos de Sensores */
-    .sensor-verde { background-color: #d4edda; color: #155724; padding: 15px; border-radius: 8px; border-left: 5px solid #28a745; text-align: center; margin-bottom: 10px;}
-    .sensor-amarillo { background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border-left: 5px solid #ffc107; text-align: center; margin-bottom: 10px;}
-    .sensor-rojo { background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border-left: 5px solid #dc3545; text-align: center; font-weight: bold; margin-bottom: 10px;}
+    .sensor-verde { 
+        background-color: #d4edda; 
+        color: #155724; 
+        padding: 15px; 
+        border-radius: 8px; 
+        border-left: 5px solid #28a745; 
+        text-align: center; 
+        margin-bottom: 10px;
+    }
+    .sensor-amarillo { 
+        background-color: #fff3cd; 
+        color: #856404; 
+        padding: 15px; 
+        border-radius: 8px; 
+        border-left: 5px solid #ffc107; 
+        text-align: center; 
+        margin-bottom: 10px;
+    }
+    .sensor-rojo { 
+        background-color: #f8d7da; 
+        color: #721c24; 
+        padding: 15px; 
+        border-radius: 8px; 
+        border-left: 5px solid #dc3545; 
+        text-align: center; 
+        font-weight: bold; 
+        margin-bottom: 10px;
+    }
     
     /* Estilos Lateral / Cronograma */
-    .horario-auto { background-color: #e2e3e5; color: #383d41; padding: 10px; border-radius: 5px; border-left: 5px solid #6c757d; margin-bottom: 5px;}
-    .whatsapp-btn { background-color: #25D366; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; text-align: center; width: 100%;}
-    .whatsapp-btn:hover { background-color: #128C7E; color: white;}
+    .horario-auto { 
+        background-color: #e2e3e5; 
+        color: #383d41; 
+        padding: 10px; 
+        border-radius: 5px; 
+        border-left: 5px solid #6c757d; 
+        margin-bottom: 5px;
+    }
+    .whatsapp-btn { 
+        background-color: #25D366; 
+        color: white; 
+        padding: 10px 20px; 
+        text-decoration: none; 
+        border-radius: 5px; 
+        font-weight: bold; 
+        display: inline-block; 
+        text-align: center; 
+        width: 100%;
+    }
+    .whatsapp-btn:hover { 
+        background-color: #128C7E; 
+        color: white;
+    }
     
     /* Tarjetas IA */
-    .ai-card { background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(34, 197, 94, 0.3); backdrop-filter: blur(10px); margin-bottom: 15px;}
-    [data-testid="stChatMessage"] { background: rgba(0, 20, 10, 0.85); border-radius: 10px; border: 1px solid rgba(34, 197, 94, 0.4); padding: 15px; margin-bottom: 10px; }
+    .ai-card { 
+        background: rgba(255, 255, 255, 0.05); 
+        padding: 20px; 
+        border-radius: 15px; 
+        border: 1px solid rgba(34, 197, 94, 0.3); 
+        backdrop-filter: blur(10px); 
+        margin-bottom: 15px;
+    }
+    [data-testid="stChatMessage"] { 
+        background: rgba(0, 20, 10, 0.85); 
+        border-radius: 10px; 
+        border: 1px solid rgba(34, 197, 94, 0.4); 
+        padding: 15px; 
+        margin-bottom: 10px; 
+    }
 
-    /* RECUADROS DE HERRAMIENTAS */
+    /* RECUADROS DE HERRAMIENTAS (MODIFICADO Y ATRACTIVO) */
     .tool-box {
-        background: rgba(255, 255, 255, 0.07);
-        border: 1px solid rgba(187, 247, 208, 0.25);
-        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.03); 
+        border: 1px solid rgba(34, 197, 94, 0.3); 
+        border-radius: 12px;
         padding: 20px;
         text-align: center;
-        backdrop-filter: blur(8px);
+        backdrop-filter: blur(10px);
         min-height: 100px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 600;
-        color: #f0fdf4;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        transition: transform 0.3s ease, background 0.3s ease;
+        font-weight: 500; 
+        color: #e2e8f0; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+        transition: transform 0.3s ease, background 0.3s ease, border 0.3s ease;
     }
     .tool-box:hover {
         transform: translateY(-5px);
-        background: rgba(255, 255, 255, 0.12);
-        border: 1px solid rgba(34, 197, 94, 0.5);
+        background: rgba(255, 255, 255, 0.08); 
+        border: 1px solid rgba(34, 197, 94, 0.6); 
+        box-shadow: 0 8px 20px rgba(34, 197, 94, 0.2); 
     }
 
     /* TABLAS DE CRISTAL (GLASSMORPHISM) SUTILES Y ELEGANTES */
@@ -129,6 +188,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Fondo agrícola animado
 fondo_base64 = cargar_imagen_base64("assets/fondo_campo.jpg")
 
 if fondo_base64:
@@ -149,7 +209,44 @@ else:
         linear-gradient(135deg, #052e16 0%, #064e3b 45%, #022c22 100%);
     """
 
-st.markdown(f"<style>.stApp {{ {fondo_css} color: white; }}</style>", unsafe_allow_html=True)
+st.markdown(f"""
+<style>
+#MainMenu {{ visibility: hidden; }}
+footer {{ visibility: hidden; }}
+header {{ background: transparent !important; }}
+.stApp {{ {fondo_css} color: white; }}
+@keyframes moverFondoCampo {{
+    0% {{ background-position: center center; background-size: 115%; }}
+    50% {{ background-position: center top; background-size: 122%; }}
+    100% {{ background-position: center bottom; background-size: 118%; }}
+}}
+.stApp::before {{
+    content: ""; position: fixed; top: 0; left: 0; width: 200%; height: 200%;
+    pointer-events: none; z-index: 0;
+    background-image:
+        radial-gradient(circle, rgba(134, 239, 172, 0.1) 2px, transparent 3px),
+        radial-gradient(circle, rgba(187, 247, 208, 0.14) 1px, transparent 3px),
+        radial-gradient(circle, rgba(34, 197, 94, 0.12) 2px, transparent 4px);
+    background-size: 120px 120px, 180px 180px, 250px 250px;
+    animation: particulasCampo 35s linear infinite;
+}}
+@keyframes particulasCampo {{
+    0% {{ transform: translate(0, 0); }}
+    100% {{ transform: translate(-250px, -350px); }}
+}}
+.block-container {{ position: relative; z-index: 2; padding-top: 2rem; padding-bottom: 2rem; }}
+[data-testid="stForm"] {{ background: rgba(0, 45, 20, 0.58); padding: 28px; border-radius: 24px; border: 1px solid rgba(187, 247, 208, 0.28); backdrop-filter: blur(14px); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.38); }}
+[data-testid="stMetric"] {{ background: rgba(0, 45, 20, 0.42); padding: 18px; border-radius: 18px; border: 1px solid rgba(187, 247, 208, 0.20); box-shadow: 0 12px 35px rgba(0, 0, 0, 0.24); }}
+button[data-baseweb="tab"] {{ background: rgba(0, 45, 20, 0.42); border-radius: 14px; color: white; margin-right: 8px; border: 1px solid rgba(187, 247, 208, 0.18); }}
+button[data-baseweb="tab"]:hover {{ background: rgba(34, 197, 94, 0.25); }}
+h1, h2, h3, h4, p, label, span {{ color: white; }}
+.stTextInput input, .stNumberInput input, .stSelectbox div, .stMultiSelect div {{ border-radius: 12px; }}
+.stButton > button {{ border-radius: 14px; font-weight: 700; border: none; background: linear-gradient(135deg, #22c55e, #15803d); color: white; box-shadow: 0 8px 25px rgba(34, 197, 94, 0.25); }}
+.stButton > button:hover {{ background: linear-gradient(135deg, #16a34a, #166534); color: white; transform: scale(1.01); }}
+[data-testid="stDataFrame"], [data-testid="stAlert"] {{ border-radius: 18px; }}
+section[data-testid="stSidebar"] {{ background: rgba(2, 44, 34, 0.94); border-right: 1px solid rgba(187, 247, 208, 0.20); }}
+</style>
+""", unsafe_allow_html=True)
 
 st.markdown("""
 <div style="position:fixed; inset:0; pointer-events:none; z-index:1; overflow:hidden;">
@@ -231,14 +328,22 @@ for var in ['paso', 'usuario', 'parcela_area', 'cultivos_mapeados', 'registro_di
             'centro_mapa', 'mapa_buscador_inicial', 'clima_real', 'total_litros_hoy', 'total_litros_tradicional', 
             'ruta_dron_actual', 'color_dron_actual', 'mostrar_animacion_dron', 'patron_animacion']:
     if var not in st.session_state:
-        if var == 'paso': st.session_state[var] = 'login'
-        elif var in ['usuario', 'cultivos_mapeados']: st.session_state[var] = {}
-        elif var in ['registro_diario', 'ruta_dron_actual']: st.session_state[var] = []
-        elif var in ['parcela_area', 'total_litros_hoy', 'total_litros_tradicional']: st.session_state[var] = 0
-        elif var == 'centro_mapa': st.session_state[var] = [-33.456, -70.650]
-        elif var == 'mapa_buscador_inicial': st.session_state[var] = [-33.456, -70.650]
-        elif var == 'clima_real': st.session_state[var] = {"temp": 0, "hum": 0, "viento": 0}
-        else: st.session_state[var] = False
+        if var == 'paso': 
+            st.session_state[var] = 'login'
+        elif var in ['usuario', 'cultivos_mapeados']: 
+            st.session_state[var] = {}
+        elif var in ['registro_diario', 'ruta_dron_actual']: 
+            st.session_state[var] = []
+        elif var in ['parcela_area', 'total_litros_hoy', 'total_litros_tradicional']: 
+            st.session_state[var] = 0
+        elif var == 'centro_mapa': 
+            st.session_state[var] = [-33.456, -70.650]
+        elif var == 'mapa_buscador_inicial': 
+            st.session_state[var] = [-33.456, -70.650]
+        elif var == 'clima_real': 
+            st.session_state[var] = {"temp": 0, "hum": 0, "viento": 0}
+        else: 
+            st.session_state[var] = False
 
 if 'chat_history' not in st.session_state: 
     st.session_state.chat_history = [
@@ -248,6 +353,29 @@ if 'chat_history' not in st.session_state:
 # ==========================================
 # 5. FUNCIONES CORE
 # ==========================================
+class MoveDrone(MacroElement):
+    def __init__(self, coords):
+        super().__init__()
+        self.coords = coords
+        self._template = Template(u"""
+        {% macro script(this, kwargs) %}
+        var coords = {{ this.coords }};
+        if(coords.length > 0){
+            var droneIcon = L.divIcon({html: '<div style="font-size:35px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin-top:-20px; margin-left:-20px;">🚁</div>', className: 'empty'});
+            var droneMarker = L.marker(coords[0], {icon: droneIcon}).addTo({{this._parent.get_name()}});
+            var i = 0;
+            function animateDrone() {
+                if (i < coords.length) {
+                    droneMarker.setLatLng(coords[i]); 
+                    i++;
+                    setTimeout(animateDrone, 350);
+                }
+            }
+            setTimeout(animateDrone, 500);
+        }
+        {% endmacro %}
+        """)
+
 def punto_en_poligono(x, y, poligono):
     n = len(poligono)
     inside = False
@@ -443,7 +571,7 @@ if st.session_state.paso == 'login':
                         st.error("❌ Este número de WhatsApp ya está registrado.")
                     conn.close()
 
-    # SECCIÓN: HERRAMIENTAS INCLUIDAS (EN RECUADROS)
+    # SECCIÓN: HERRAMIENTAS INCLUIDAS
     st.markdown("--- ")
     st.markdown("<h3 style='text-align: center; margin-bottom: 30px;'>Herramientas Incluidas</h3>", unsafe_allow_html=True)
     
@@ -534,6 +662,7 @@ elif st.session_state.paso == 'onboarding_cultivos':
     with col_ctrl:
         st.subheader("1. Seleccionar Tipo de Planta")
         tipo_cultivo = st.selectbox("Base de Datos PLAS (Chile):", list(DB_CULTIVOS_PLAS.keys()))
+        
         req_h = DB_CULTIVOS_PLAS[tipo_cultivo]['agua_m2']
         color_c = DB_CULTIVOS_PLAS[tipo_cultivo]['color']
         
@@ -702,7 +831,7 @@ elif st.session_state.paso == 'dashboard':
                 st.session_state.color_dron_actual = "cyan" if tipo_m == "Riego de Emergencia" else ("orange" if tipo_m == "Nutrición (Proteínas)" else "red")
                 st.session_state.ruta_dron_actual = calcular_ruta_patron(zonas_v[zona_o], patron_vuelo, c[0], c[1])
                 
-                # Eliminada la variable mostrar_animacion_dron ya que no se usará helicóptero animado
+                st.session_state.mostrar_animacion_dron = True
                 
                 with st.spinner(f"🛰️ Calculando telemetría VRA. Trazando ruta hacia {zona_o}..."):
                     time.sleep(1.5)
@@ -722,7 +851,7 @@ elif st.session_state.paso == 'dashboard':
                 folium.Polygon(locations=zonas_v["Zona Media"], color="#ffc107", weight=2, fill=True, fill_color="#ffc107", fill_opacity=0.45, tooltip="Zona Media (40-60% Humedad)").add_to(map_d)
                 folium.Polygon(locations=zonas_v["Zona Crítica"], color="#dc3545", weight=2, fill=True, fill_color="#dc3545", fill_opacity=0.55, tooltip="Zona Crítica (<30% Humedad)").add_to(map_d)
 
-            # Ruta del Dron Táctica (Solo la línea punteada AntPath)
+            # Ruta del Dron Táctica (Línea punteada)
             if st.session_state.ruta_dron_actual: 
                 plugins.AntPath(locations=st.session_state.ruta_dron_actual, color=st.session_state.color_dron_actual, weight=5, dash_array=[10, 20], delay=800, pulse_color='white').add_to(map_d)
             
@@ -826,7 +955,7 @@ _Generado automáticamente por Inteligencia Geoespacial PLAS._"""
             with c1: 
                 st.subheader("Predicción de Producción")
                 
-                # 🚀 SOLUCIÓN: GRÁFICO ALTAIR ESTILIZADO CON DEGRADADO
+                # GRÁFICO ALTAIR ESTILIZADO CON DEGRADADO
                 grafico_ia = alt.Chart(df_crudo).mark_bar(
                     size=40, 
                     cornerRadiusTopLeft=6,
@@ -861,7 +990,7 @@ _Generado automáticamente por Inteligencia Geoespacial PLAS._"""
             st.warning("Debe mapear sectores productivos en la Fase 3 para poder generar el Gemelo Digital.")
 
     # ------------------------------------------
-    # PESTAÑA 5: CONSULTOR IA (MOTOR NLP AVANZADO Y FITOSANITARIO)
+    # PESTAÑA 5: CONSULTOR IA 
     # ------------------------------------------
     with tab5:
         st.header("🤖 Consultor Agrotecnológico (IA)")
@@ -903,7 +1032,7 @@ _Generado automáticamente por Inteligencia Geoespacial PLAS._"""
                 else:
                     respuesta_ia = f"☁️ **Condiciones Actuales en Terreno:**\n- Temperatura: **{tr}°C**\n- Viento: **{vr} km/h**\n- Humedad Ambiental: **{hr}%**\n\nVentana operativa 100% segura para vuelos de aspersión."
 
-            # INTENCIÓN 4: RIESGOS FITOSANITARIOS, PLAGAS Y ENFERMEDADES
+            # INTENCIÓN 4: RIESGOS FITOSANITARIOS Y ENFERMEDADES
             elif any(palabra in prompt_lower for palabra in ["riesgo", "plaga", "enfermedad", "consecuencia", "qué pasa", "que pasa", "falta agua", "estrés", "estres"]):
                 if st.session_state.cultivos_mapeados:
                     alerta = "🚨 **Análisis de Riesgos y Fitopatología (IA):**\n\nHe analizado la base de datos PLAS para los cultivos que tienes mapeados. Considera las siguientes vulnerabilidades:\n\n"
